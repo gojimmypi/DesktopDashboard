@@ -21,5 +21,8 @@
     <ClInclude Include="__vm\.DesktopDashboard.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FreeSansBold24pt7b.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,9 +1,16 @@
+// 
 // created in Visual Studio 2015 with Visual Micro add-in:  vMicro - New Arduino Project
+//   https://www.visualstudio.com/downloads/
+//
+//   http://www.visualmicro.com/
+//
 // View - Solution Explorer; Right-click on Solution in ; select "add to sourcce control"
 // View - Team Explorer; Publish to GitHub (Get Started...)
-
+//
 // copy / paste Adafruit graphictest.ino  (see Arduino File-Examples...)
 // if Arduino environment properly installed, simply vMicro-Build to automaticlly resolve references (no need to manually vMicro-Add Library...)
+//
+// Default vMicro project location is C:\Users\<username>\Documents\Arduino\<ProjectName>
 
 /***************************************************
 This is our GFX example for the Adafruit ILI9341 Breakout and Shield
@@ -21,13 +28,11 @@ MIT license, all text above must be included in any redistribution
 ****************************************************/
 
 
-//#include "font_Arial.h"
 //#include "ImageViewer.h"
 #include "SPI.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
-//#include "font_Arial.h"
-//#include "FreeSansBold24pt7b.h"
+#include "Adafruit_GFX.h" // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
+#include "Adafruit_ILI9341.h"  // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
+#include "FreeSansBold24pt7b.h" // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 //// For the Adafruit shield, these are the default.
 //#define TFT_DC 9
@@ -191,7 +196,7 @@ unsigned long testFillScreen() {
 unsigned long testText() {
 	tft.fillScreen(ILI9341_BLACK);
 	unsigned long start = micros();
-	//tft.setFont(&FreeSansBold24pt7b);
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
 	tft.setCursor(0, 36);
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
 	tft.println("Hello World!");
