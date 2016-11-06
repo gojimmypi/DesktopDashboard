@@ -26,8 +26,8 @@ MIT license, all text above must be included in any redistribution
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-#include "font_Arial.h"
-#include "FreeSansBold24pt7b.h"
+//#include "font_Arial.h"
+//#include "FreeSansBold24pt7b.h"
 
 //// For the Adafruit shield, these are the default.
 //#define TFT_DC 9
@@ -191,7 +191,7 @@ unsigned long testFillScreen() {
 unsigned long testText() {
 	tft.fillScreen(ILI9341_BLACK);
 	unsigned long start = micros();
-	tft.setFont(&FreeSansBold24pt7b);
+	//tft.setFont(&FreeSansBold24pt7b);
 	tft.setCursor(0, 36);
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
 	tft.println("Hello World!");
