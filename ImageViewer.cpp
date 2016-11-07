@@ -4,7 +4,13 @@
 
 #include "ImageViewer.h"
 
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
 
+ 
 // ImageViewer.h
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert
@@ -31,7 +37,7 @@ int ah2i(uint8_t s)
 }
 
 
-void dldDImage(uint16_t  xloc, uint16_t yloc) {
+void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 	uint16_t  r;
 	uint8_t hb, lb, cv, lv1, lv2, cb1, cb2;
 	uint16_t  frsize, iwidth, iheight;
@@ -45,8 +51,12 @@ void dldDImage(uint16_t  xloc, uint16_t yloc) {
 	Serial.print("[HTTP] begin...\n");
 
 	// configure server and url
-	http.begin("http://10.16.10.11:8980/tempgr/resizeimage-pout.php?IMG=1");
+	//char * imagePath = "http://beanstalk.azurewebsites.net/helloworld.png";
+	char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
+	http.begin(imagePath);
 	Serial.print("[HTTP] GET...\n");
+	Serial.print(imagePath);
+	Serial.println();
 	// start connection and send HTTP header
 	int httpCode = http.GET();
 	if (httpCode > 0) {
@@ -145,7 +155,7 @@ void dldDImage(uint16_t  xloc, uint16_t yloc) {
 						if (bytescolleted > 1) {
 							r = word(cb1, cb2);
 							if (y + yloc < iheight) {
-								tft.drawPixel(x + xloc, y + yloc, r);
+								tft->drawPixel(x + xloc, y + yloc, r);
 							}
 							bytescolleted = 0;
 							x++;
@@ -164,15 +174,17 @@ void dldDImage(uint16_t  xloc, uint16_t yloc) {
 			Serial.println("y=" + String(y));
 			Serial.println("[HTTP] connection closed or file end.\n");
 			Serial.println(String(millis() - DrawTime));
-			tft.fillRect(1, 180, 238, 70, 0x0000);
-			tft.setCursor(15, 195);
-			tft.setTextColor(ILI9341_RED);  tft.setTextSize(4);
-			tft.println(String(millis() - DrawTime) + "ms");
+			tft->fillRect(1, 180, 238, 70, 0x0000);
+			tft->setCursor(15, 195);
+			tft->setTextColor(ILI9341_RED);  
+			tft->println(String(millis() - DrawTime) + "ms");
 			buffcnt = 0;
 			firstpacket = 0;
 			x = 0;y = 0;
 			buffidx = 0;
-			t2Time = millis();
+			Serial.println("Done! waiting...");
+			delay(5000);
+			//t2Time = millis();
 		}
 	}
 	else {
@@ -180,5 +192,5 @@ void dldDImage(uint16_t  xloc, uint16_t yloc) {
 	}
 
 	http.end();
-	HRequestsActive = 0
+	//HRequestsActive = 0;
 }
