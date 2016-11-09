@@ -36,7 +36,398 @@ int ah2i(uint8_t s)
 }
 
 
-void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
+uint16_t read16(WiFiClient * f) {
+
+	uint16_t result;
+	((uint8_t *)&result)[0] = f->read(); // LSB
+	((uint8_t *)&result)[1] = f->read(); // MSB
+	return result;
+}
+
+uint32_t read32(WiFiClient * f) {
+	uint32_t result;
+	((uint8_t *)&result)[0] = f->read(); // LSB
+	((uint8_t *)&result)[1] = f->read();
+	((uint8_t *)&result)[2] = f->read();
+	((uint8_t *)&result)[3] = f->read(); // MSB
+	return result;
+}
+
+uint16_t read16(unsigned char * d, int fromIndex) {
+
+	uint16_t result;
+	((uint8_t *)&result)[0] = d[fromIndex]; // LSB
+	((uint8_t *)&result)[1] = d[fromIndex + 1]; // MSB
+	return result;
+}
+
+uint32_t read32(unsigned char * d, int fromIndex) {
+	uint32_t result;
+	((uint8_t *)&result)[0] = d[fromIndex]; // LSB
+	((uint8_t *)&result)[1] = d[fromIndex + 1];
+	((uint8_t *)&result)[2] = d[fromIndex + 2];
+	((uint8_t *)&result)[3] = d[fromIndex + 3]; // MSB
+	return result;
+}
+
+
+unsigned char* bmpRawReader(WiFiClient * f) {
+	// based on code from http://stackoverflow.com/questions/9296059/read-pixel-value-in-bmp-file
+	uint8_t info[54];
+
+	f->readBytes(info, 54); // read the 54-byte header
+
+							// extract image height and width from header
+	int width = *(int*)&info[18];
+	int height = *(int*)&info[22];
+
+	int size = 3 * width * height;
+	unsigned char* data = new unsigned char[size]; // allocate 3 bytes per pixel
+
+	f->readBytes(data, size);
+
+	for (int i = 0; i < size; i += 3)
+	{
+		unsigned char tmp = data[i];
+		data[i] = data[i + 2];
+		data[i + 2] = tmp;
+	}
+	return data;
+}
+
+boolean bmpReadHeader(WiFiClient * f)
+{
+
+	// read header
+	uint32_t tmp;
+	uint8_t bmpDepth;
+
+	if (read16(f) != 0x4D42) {
+		Serial.println("Magic bytes missing");
+		return false;
+	}
+
+	// read file size
+	tmp = read32(f);
+	Serial.print("size 0x");
+	Serial.println(tmp, HEX);
+
+	// read and ignore creator bytes
+	read32(f);
+
+	uint32_t offset = read32(f);
+	Serial.print("offset ");
+	Serial.println(offset, DEC);
+
+// read DIB header
+tmp = read32(f);
+Serial.print("header size ");
+Serial.println(tmp, DEC);
+
+
+int bmp_width = read32(f);
+int bmp_height = read32(f);
+Serial.print("Width:");
+Serial.println(bmp_width);
+Serial.print("Height:");
+Serial.println(bmp_height);
+
+//if (bmp_width != 240 || bmp_height != 320)      // if image is not 320x240, return false
+//{
+//	Serial.println("Wrong dimensions");
+//	return false;
+//}
+
+if (read16(f) != 1)
+{
+	Serial.println("Wrong # color planes");
+	return false;
+}
+
+bmpDepth = read16(f);
+Serial.print("bitdepth ");
+Serial.println(bmpDepth, DEC);
+
+if (read32(f) != 0) {
+	Serial.println("Compression not supported!");
+	return false;
+}
+
+read32(f); //imagesizes
+read32(f);//horizontal resolution
+read32(f);//vertical resolution
+read32(f);//number of colors
+read32(f);//number of important colors
+return true;
+}
+// http://cppcoder.blogspot.com/2007/11/bmp-file-format.html
+
+void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
+{
+	HTTPClient http;
+	http.begin(imagePath);
+
+	Serial.print("Starting bmpDraw 1.01: ");
+	Serial.print(imagePath);
+	Serial.print("  -  ");
+	uint32_t time = millis();
+	int httpCode = http.GET();
+	Serial.println(httpCode);
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		// file found at server
+		if (httpCode == HTTP_CODE_OK) {
+			unsigned long DrawTime = millis();
+			// get lenght of document (is -1 when Server sends no Content-Length header)
+			int len = http.getSize();
+			unsigned char* data = new unsigned char[len]; 
+			unsigned char tmp;
+			Serial.print("  length = ");
+			Serial.println(len);
+			WiFiClient * stream = http.getStreamPtr();
+
+			int thisBytesAvailable = stream->available();
+
+			int thisResult = 0;
+			thisResult = stream->read(data, thisBytesAvailable);
+			int i = thisResult;
+			Serial.print("Initial Read = ");
+			Serial.println(i);
+
+
+			const int HEADER_SIZE = 54;
+			// stream->read(info, HEADER_SIZE); // read the 54-byte header
+
+									// extract image height and width from header
+			int bfOffBits = read32(data, 10); //  *(int*)&data[10]; // typically 1078 
+
+			int biSize = read32(data , 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
+			int biWidth = read32(data, 18); // *(int*)data + 18;
+			int biHeight = read32(data, 22); // *(int*)data + 22;
+			int biBitCount = read32(data, 28); // Specifies the number of bits per pixel.
+			int biSizeImage = read32(data, 34); // *(int*)data + 34;
+
+			Serial.print("filelen = ");
+			Serial.println(len);
+
+			Serial.print("biSize = ");
+			Serial.println(biSize);
+			Serial.print("Offset = "); // Specifies the offset from the beginning of the file to the bitmap data.
+			Serial.println(bfOffBits);
+
+
+			Serial.print("biSize = "); // Specifies the size of the BITMAPINFOHEADER structure, in bytes.
+			Serial.println(biSize);
+			Serial.print("biWidth = ");
+			Serial.println(biWidth);
+			Serial.print("biHeight = ");
+			Serial.println(biHeight);
+			Serial.print("biBitCount = ");
+			Serial.println(biBitCount);
+			Serial.print("biSizeImage = ");
+			Serial.println(biSizeImage);
+
+			int size = 3 * biWidth * biHeight;
+
+			int maxWait = 100;
+			int thisWait = 0;
+
+			//int thisBytesRead = HEADER_SIZE;
+			Serial.print("Initial bytes available: ");
+			Serial.println(thisBytesAvailable);
+			while (i < len) {
+				thisBytesAvailable = stream->available();
+				if ((i < len) && (thisBytesAvailable == 0)) {
+					yield();
+					thisBytesAvailable = stream->available();
+				}
+				if (thisBytesAvailable > 0) {
+					Serial.print("Reading.... ");
+					yield();
+					thisResult = stream->read(data + i, thisBytesAvailable);
+					i += thisResult;
+					Serial.print(thisResult);
+					Serial.println(" bytes. Done.");
+					delay(1);
+				}
+			}
+			Serial.print("Render! i = ");
+			Serial.println(i);
+			if (biBitCount == 1) {
+				Serial.println("B/W not rendered");
+				tft->println("B/W not rendered");
+			} // BW
+			else if (biBitCount == 4) {
+				Serial.println("4 bit not rendered");
+			} // 4 - bit
+			else if (biBitCount ==8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
+				Serial.println("8 bit pic");
+				tft->println("8-bit not rendered");
+				for (int i = 0; i < biHeight; i++)
+					{
+						thisWait = 0;
+						yield();
+						//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
+						//	Serial.print(".");
+						//	delay(10);
+						//}
+						for (int j = 0; j < biWidth; j++)
+						{
+							tft->drawPixel(j, i, data[bfOffBits + biWidth * i + j]);
+						}
+					}
+				} // 8 - bit
+			else if (biBitCount == 24) {
+				Serial.println("bmp24");
+				for (int i = 0; i < biHeight; i++)
+				{
+					thisWait = 0;
+					yield();
+					//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
+					//	Serial.print(".");
+					//	delay(10);
+					//}
+					int thisY = 0;
+					for (int j = 0; j < biWidth * 3; j += 3)
+					{
+						// Convert (B, G, R) to (R, G, B)
+						//tmp = data[j];
+						//data[j] = data[j + 2];
+						//data[j + 2] = tmp;
+						int thisIndex = bfOffBits + biWidth * i + j;
+						uint8_t b = data[thisIndex + 2];
+						uint8_t g = data[thisIndex + 1];
+						uint8_t r = data[thisIndex + 0];
+						tft->drawPixel(thisY, i, tft->color565(r, g, b));
+					}
+					thisY++;
+				}
+			} // 24 bit
+			else {
+				Serial.print("Unsupported bit depth: ");
+				Serial.println(biBitCount);
+				tft->print("Unsupported bit depth: ");
+				tft->println(biBitCount);
+			}
+
+
+
+			stream->flush();
+			stream->stopAll();
+
+		}
+	}
+	Serial.print(millis() - time, DEC);
+	Serial.println(" ms");
+	http.end();
+}
+
+void bmpDraw2(Adafruit_ILI9341 * tft, char * imagePath)
+{
+	HTTPClient http;
+	http.begin(imagePath);
+
+	Serial.print("Starting bmpDraw: ");
+	Serial.print(imagePath);
+	Serial.print("  -  ");
+	uint32_t time = millis();
+	int httpCode = http.GET();
+	Serial.println(httpCode);
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		// file found at server
+		if (httpCode == HTTP_CODE_OK) {
+			unsigned long DrawTime = millis();
+			// get lenght of document (is -1 when Server sends no Content-Length header)
+			int len = http.getSize();
+			Serial.print("  length = ");
+			Serial.println(len);
+			WiFiClient * stream = http.getStreamPtr();
+			bmpReadHeader(stream);
+			for (int i = 61; i >= 0; i--)
+			{
+				//Serial.println("i"); delay(100);
+				for (int j = 0; j<137; j++)
+				{
+					//Serial.println("j"); delay(100);
+					size_t size = stream->available();
+					//Serial.println("size=" + String(size)); yield(); delay(1);
+					if (size) {
+						yield();
+						//Serial.println("go"); delay(100);
+						uint8_t b = stream->read();
+						uint8_t g = stream->read();
+						uint8_t r = stream->read();
+						// Serial.println("draw"); delay(100);
+						tft->drawPixel(j, i, tft->color565(r, g, b));
+					}
+				}
+			}
+			//stream->flush();
+			//stream->stopAll();
+
+		}
+	}
+	Serial.print(millis() - time, DEC);
+	Serial.println(" ms");
+	http.end();
+}
+
+
+void bmpDraw3(Adafruit_ILI9341 * tft, char * imagePath)
+{
+	HTTPClient http;
+	http.begin(imagePath);
+
+	Serial.print("Starting bmpDraw: ");
+	Serial.print(imagePath);
+	Serial.print("  -  ");
+	uint32_t time = millis();
+	int httpCode = http.GET();
+	Serial.println(httpCode);
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		// file found at server
+		if (httpCode == HTTP_CODE_OK) {
+			unsigned long DrawTime = millis();
+			// get lenght of document (is -1 when Server sends no Content-Length header)
+			int len = http.getSize();
+			Serial.print("  length = ");
+			Serial.println(len);
+			WiFiClient * stream = http.getStreamPtr();
+			bmpReadHeader(stream);
+			for (int i = 61; i >= 0; i--)
+			{
+				//Serial.println("i"); delay(100);
+				for (int j = 0; j<137; j++)
+				{
+					//Serial.println("j"); delay(100);
+					size_t size = stream->available();
+					//Serial.println("size=" + String(size)); yield(); delay(1);
+					if (size) {
+						yield();
+						//Serial.println("go"); delay(100);
+						uint8_t b = stream->read();
+						uint8_t g = stream->read();
+						uint8_t r = stream->read();
+						// Serial.println("draw"); delay(100);
+						tft->drawPixel(j, i, tft->color565(r, g, b));
+					}
+				}
+			}
+			//stream->flush();
+			//stream->stopAll();
+
+		}
+	}
+	Serial.print(millis() - time, DEC);
+	Serial.println(" ms");
+	http.end();
+}
+
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 240
+void dldDImage2(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 	uint16_t  r;
 	uint8_t hb, lb, cv, lv1, lv2, cb1, cb2;
 	uint16_t  frsize, iwidth, iheight;
@@ -51,7 +442,8 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 
 	// configure server and url
 	//char * imagePath = "http://beanstalk.azurewebsites.net/helloworld.png";
-	char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
+	//char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
+	char * imagePath = "http://healthagency.slocounty.ca.gov/macVPN/newimage.bmp";
 	http.begin(imagePath);
 	Serial.print("[HTTP] GET...\n");
 	Serial.print(imagePath);
@@ -78,13 +470,109 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 			while (http.connected() && (len > 0 || len == -1)) {
 				// get available data size
 				size_t size = stream->available();
-				//Serial.println("size="+String(size));
+				Serial.println("size=" + String(size)); yield(); delay(1);
 				if (size) {
 					// read up to 128 byte
 					buffidx = 0;
 					int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
 					// Uncomment Below to send raw output it to Serial 
-					// Serial.write(buff, c);
+					// Serial.write(buff, c); yield(); delay(1);
+					while (buffidx < c) {
+
+						for (int y = 0; y < SCREEN_HEIGHT; y++) {
+							uint16_t buf[SCREEN_WIDTH];
+							for (int x = SCREEN_WIDTH - 1; x >= 0; x--) {
+								byte l = stream->read();
+								byte h = stream->read();
+								buf[x] = ((uint16_t)h << 8) | l;
+							}
+							tft->setCursor(0, y);
+							//tft->(buf);
+						}
+
+
+					}
+					if (len > 0) {
+						len -= c;
+					}
+				}
+				delay(2);
+			}
+			Serial.println("y=" + String(y));
+			Serial.println("[HTTP] connection closed or file end.\n");
+			Serial.println(String(millis() - DrawTime));
+			tft->fillRect(1, 180, 238, 70, 0x0000);
+			tft->setCursor(15, 195);
+			tft->setTextColor(ILI9341_RED);
+			tft->println(String(millis() - DrawTime) + "ms");
+			buffcnt = 0;
+			firstpacket = 0;
+			x = 0; y = 0;
+			buffidx = 0;
+			Serial.println("Done! waiting...");
+			delay(5000);
+			//t2Time = millis();
+		}
+	}
+	else {
+		Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+	}
+
+	http.end();
+	//HRequestsActive = 0;
+}
+
+
+void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
+	uint16_t  r;
+	uint8_t hb, lb, cv, lv1, lv2, cb1, cb2;
+	uint16_t  frsize, iwidth, iheight;
+	int x = 0, y = 0;
+	int firstpacket = 0;
+	int buffcnt = 0;
+	int bytescolleted = 0;
+
+	HTTPClient http;
+
+	Serial.print("[HTTP] begin...\n");
+
+	// configure server and url
+	//char * imagePath = "http://beanstalk.azurewebsites.net/helloworld.png";
+	//char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
+	char * imagePath = "http://healthagency.slocounty.ca.gov/macVPN/newimage.bin";
+	http.begin(imagePath);
+	Serial.print("[HTTP] GET...\n");
+	Serial.print(imagePath);
+	Serial.println();
+	// start connection and send HTTP header
+	int httpCode = http.GET();
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+		// file found at server
+		if (httpCode == HTTP_CODE_OK) {
+			unsigned long DrawTime = millis();
+			// get lenght of document (is -1 when Server sends no Content-Length header)
+			int len = http.getSize();
+			// create buffer for read
+			uint8_t buff[2048] = { 0 };
+			int  buffidx = sizeof(buff);
+			// get tcp stream
+			WiFiClient * stream = http.getStreamPtr();
+			uint16_t BytesToRead1 = 0;
+			uint16_t BytesToRead2 = 8192;
+			// read all data from server
+			while (http.connected() && (len > 0 || len == -1)) {
+				// get available data size
+				size_t size = stream->available();
+				Serial.println("size="+String(size)); yield(); delay(1);
+				if (size) {
+					// read up to 128 byte
+					buffidx = 0;
+					int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+					// Uncomment Below to send raw output it to Serial 
+					// Serial.write(buff, c); yield(); delay(1);
 
 					while (buffidx < c) {
 						// Strip out info not part of picture Steam could be multiple packets 
@@ -93,10 +581,10 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 						if (firstpacket == 0 || buffcnt > (BytesToRead2 - 1)) {
 							int rflag = 0;
 							int hcnt = 0;
-							// Serial.print("<New Packet>");
+							Serial.print("<New Packet>"); yield(); delay(1);
 							while (rflag == 0) {
 								cv = buff[buffidx++];
-								//Serial.write(cv);
+								Serial.write(cv); yield(); delay(1);
 								if (cv == 10 && lv1 == 13 && lv2 > 47) {
 									rflag = 1;
 								}
@@ -118,7 +606,7 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 								iwidth = hb;
 								iwidth = iwidth << 8;
 								iwidth = iwidth + lb;
-								Serial.println("Width=" + String(iwidth));
+								Serial.println("Width=" + String(iwidth)); yield(); delay(1);
 								buffcnt = buffcnt + 2;
 							}
 							yield();
@@ -129,13 +617,13 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 								iheight = hb;
 								iheight = iheight << 8;
 								iheight = iheight + lb;
-								Serial.println("Height=" + String(iheight));
+								Serial.println("Height=" + String(iheight)); yield(); delay(1);
 								buffcnt = buffcnt + 2;
 							}
 							firstpacket = 1;
-							//Serial.println("Bytes to next packet="+String(BytesToRead1));
+							Serial.println("Bytes to next packet=" + String(BytesToRead1)); yield(); delay(1);
 							BytesToRead2 = BytesToRead1;
-							//Serial.println("</New Packet!!>");
+							Serial.println("</New Packet!!>");
 
 						}
 
@@ -320,22 +808,24 @@ MIT license, all text above must be included in any redistribution
 // BMP data is stored little-endian, Arduino is little-endian too.
 // May need to reverse subscript order if porting elsewhere.
 
-uint16_t read16(WiFiClient * f) {
 
-	uint16_t result;
-	((uint8_t *)&result)[0] = f->read(); // LSB
-	((uint8_t *)&result)[1] = f->read(); // MSB
-	return result;
-}
-
-uint32_t read32(WiFiClient * f) {
-	uint32_t result;
-	((uint8_t *)&result)[0] = f->read(); // LSB
-	((uint8_t *)&result)[1] = f->read();
-	((uint8_t *)&result)[2] = f->read();
-	((uint8_t *)&result)[3] = f->read(); // MSB
-	return result;
-}
+// reverse endian (?)
+//uint16_t read16(WiFiClient * f) {
+//
+//	uint16_t result;
+//	((uint8_t *)&result)[1] = f->read(); // MSB
+//	((uint8_t *)&result)[0] = f->read(); // LSB
+//	return result;
+//}
+//
+//uint32_t read32(WiFiClient * f) {
+//	uint32_t result;
+//	((uint8_t *)&result)[3] = f->read(); // MSB
+//	((uint8_t *)&result)[2] = f->read();
+//	((uint8_t *)&result)[1] = f->read();
+//	((uint8_t *)&result)[0] = f->read(); // LSB
+//	return result;
+//}
 
 #define BUFFPIXEL 240
 //===========================================================
