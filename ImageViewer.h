@@ -13,7 +13,7 @@
 
 int ah2i(uint8_t s);
 void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
- 
+void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath);
 
 #endif
 

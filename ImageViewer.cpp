@@ -279,29 +279,42 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				} // 8 - bit
 			else if (biBitCount == 24) {
 				Serial.println("bmp24");
-				for (int i = 0; i < biHeight; i++)
+				//int count = bfOffBits;
+				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
+				int extra = biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
+				//for (int i = 0; i < biHeight; i++) // rows of data make up height
+				for (int i = biHeight -1; i >= 0; i--) // rows of data make up height
 				{
+					count += extra;
 					thisWait = 0;
 					yield();
-					//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
-					//	Serial.print(".");
-					//	delay(10);
-					//}
-					int thisY = 0;
-					for (int j = 0; j < biWidth * 3; j += 3)
-					{
+					uint8_t r; uint8_t g; uint8_t b;
+
+					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
+					for (int j = biWidth - 1; j >=0; j--)
+						{
+						for (int k = 0; k < 3; k++) {
+							switch (k) {
+							case 0:
+								 r= data[len - ++count];
+								break;
+							case 1:
+								 g = data[len - ++count];
+								break;
+							case 2:
+								 b = data[len - ++count];
+								break;
+							}
+						}
 						// Convert (B, G, R) to (R, G, B)
 						//tmp = data[j];
 						//data[j] = data[j + 2];
 						//data[j + 2] = tmp;
-						int thisIndex = bfOffBits + biWidth * i + j;
-						uint8_t b = data[thisIndex + 2];
-						uint8_t g = data[thisIndex + 1];
-						uint8_t r = data[thisIndex + 0];
-						tft->drawPixel(thisY, i, tft->color565(r, g, b));
+						// int thisIndex = bfOffBits + biWidth * i + j;
+						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
-					thisY++;
 				}
+				delay(2000000);
 			} // 24 bit
 			else {
 				Serial.print("Unsupported bit depth: ");
@@ -953,6 +966,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, uint8_t x, uint16_t y) {
 						r = sdbuffer[buffidx++];
 						awColors[col] = tft->color565(r, g, b);
 					} // end pixel
+
 					//us = usec;
 					//usec -= us;
 					//total_parse += us;
