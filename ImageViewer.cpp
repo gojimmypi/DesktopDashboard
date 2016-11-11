@@ -120,48 +120,295 @@ boolean bmpReadHeader(WiFiClient * f)
 	Serial.print("offset ");
 	Serial.println(offset, DEC);
 
-// read DIB header
-tmp = read32(f);
-Serial.print("header size ");
-Serial.println(tmp, DEC);
+	// read DIB header
+	tmp = read32(f);
+	Serial.print("header size ");
+	Serial.println(tmp, DEC);
 
 
-int bmp_width = read32(f);
-int bmp_height = read32(f);
-Serial.print("Width:");
-Serial.println(bmp_width);
-Serial.print("Height:");
-Serial.println(bmp_height);
+	int bmp_width = read32(f);
+	int bmp_height = read32(f);
+	Serial.print("Width:");
+	Serial.println(bmp_width);
+	Serial.print("Height:");
+	Serial.println(bmp_height);
 
-//if (bmp_width != 240 || bmp_height != 320)      // if image is not 320x240, return false
-//{
-//	Serial.println("Wrong dimensions");
-//	return false;
-//}
+	//if (bmp_width != 240 || bmp_height != 320)      // if image is not 320x240, return false
+	//{
+	//	Serial.println("Wrong dimensions");
+	//	return false;
+	//}
 
-if (read16(f) != 1)
-{
-	Serial.println("Wrong # color planes");
-	return false;
+	if (read16(f) != 1)
+	{
+		Serial.println("Wrong # color planes");
+		return false;
+	}
+
+	bmpDepth = read16(f);
+	Serial.print("bitdepth ");
+	Serial.println(bmpDepth, DEC);
+
+	if (read32(f) != 0) {
+		Serial.println("Compression not supported!");
+		return false;
+	}
+
+	read32(f); //imagesizes
+	read32(f);//horizontal resolution
+	read32(f);//vertical resolution
+	read32(f);//number of colors
+	read32(f);//number of important colors
+	return true;
 }
 
-bmpDepth = read16(f);
-Serial.print("bitdepth ");
-Serial.println(bmpDepth, DEC);
-
-if (read32(f) != 0) {
-	Serial.println("Compression not supported!");
-	return false;
-}
-
-read32(f); //imagesizes
-read32(f);//horizontal resolution
-read32(f);//vertical resolution
-read32(f);//number of colors
-read32(f);//number of important colors
-return true;
-}
 // http://cppcoder.blogspot.com/2007/11/bmp-file-format.html
+
+uint8_t byteInStream(WiFiClient * stream, int position) {
+	int len = 1;
+	unsigned char* data = new unsigned char[len];
+	return data[position];
+}
+void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
+{
+	HTTPClient http;
+	http.begin(imagePath);
+
+	Serial.print("Starting bmpDraw 1.01: ");
+	Serial.print(imagePath);
+	Serial.print("  -  ");
+	uint32_t time = millis();
+	int httpCode = http.GET();
+	Serial.println(httpCode);
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		// file found at server
+		if (httpCode == HTTP_CODE_OK) {
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+
+			unsigned long DrawTime = millis();
+			// get lenght of document (is -1 when Server sends no Content-Length header)
+			int len = http.getSize();
+			unsigned char* data = new unsigned char[len];
+			unsigned char tmp;
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			Serial.print("  length = ");
+			Serial.println(len);
+			WiFiClient * stream = http.getStreamPtr();
+
+			Serial.println("Step 1");
+			int thisBytesAvailable = stream->available();
+			Serial.print("thisBytesAvailable = ");
+			Serial.print(thisBytesAvailable);
+			int thisResult = 0;
+			Serial.println("Step 2");
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			thisResult = stream->read(data, thisBytesAvailable);
+			int i = thisResult;
+			Serial.print("Initial Read = ");
+			Serial.println(i);
+
+
+			const int HEADER_SIZE = 54;
+			// stream->read(info, HEADER_SIZE); // read the 54-byte header
+
+			// extract image height and width from header
+			int bfOffBits = read32(data, 10); //  *(int*)&data[10]; // typically 1078 
+
+			int biSize = read32(data, 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
+			int biWidth = read32(data, 18); // *(int*)data + 18;
+			int biHeight = read32(data, 22); // *(int*)data + 22;
+			int biBitCount = read32(data, 28); // Specifies the number of bits per pixel.
+			int biSizeImage = read32(data, 34); // *(int*)data + 34;
+
+			Serial.print("filelen = ");
+			Serial.println(len);
+
+			Serial.print("biSize = ");
+			Serial.println(biSize);
+			Serial.print("Offset = "); // Specifies the offset from the beginning of the file to the bitmap data.
+			Serial.println(bfOffBits);
+
+
+			Serial.print("biSize = "); // Specifies the size of the BITMAPINFOHEADER structure, in bytes.
+			Serial.println(biSize);
+			Serial.print("biWidth = ");
+			Serial.println(biWidth);
+			Serial.print("biHeight = ");
+			Serial.println(biHeight);
+			Serial.print("biBitCount = ");
+			Serial.println(biBitCount);
+			Serial.print("biSizeImage = ");
+			Serial.println(biSizeImage);
+
+			int size = 3 * biWidth * biHeight;
+
+			int maxWait = 100;
+			int thisWait = 0;
+
+			//int thisBytesRead = HEADER_SIZE;
+			Serial.print("Initial bytes available: ");
+			Serial.println(thisBytesAvailable);
+			while (i < len) {
+				thisBytesAvailable = stream->available();
+				if ((i < len) && (thisBytesAvailable == 0)) {
+					yield();
+					thisBytesAvailable = stream->available();
+				}
+				if (thisBytesAvailable > 0) {
+					Serial.print("Reading.... ");
+					yield();
+					thisResult = stream->read(data + i, thisBytesAvailable);
+					i += thisResult;
+					Serial.print(thisResult);
+					Serial.println(" bytes. Done.");
+					delay(1);
+				}
+			}
+			Serial.print("Render! i = ");
+			Serial.println(i);
+			if (biBitCount == 1) {
+				Serial.println("B/W not rendered");
+				tft->println("B/W not rendered");
+			} // BW
+			else if (biBitCount == 4) {
+				Serial.println("4 bit not rendered");
+			} // 4 - bit
+			else if (biBitCount == 8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
+				Serial.println("8 bit pic");
+				tft->println("8-bit not rendered");
+				for (int i = 0; i < biHeight; i++)
+				{
+					thisWait = 0;
+					yield();
+					//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
+					//	Serial.print(".");
+					//	delay(10);
+					//}
+					for (int j = 0; j < biWidth; j++)
+					{
+						tft->drawPixel(j, i, data[bfOffBits + biWidth * i + j]);
+					}
+				}
+			} // 8 - bit
+
+			else if (biBitCount == 24) {
+				Serial.println("bmp24");
+				//int count = bfOffBits;
+				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
+				int extra = biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
+										 //for (int i = 0; i < biHeight; i++) // rows of data make up height
+				for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
+				{
+					count += extra;
+					yield();
+					uint8_t r; uint8_t g; uint8_t b;
+
+					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
+					for (int j = biWidth - 1; j >= 0; j--)
+					{
+						for (int k = 0; k < 3; k++) {
+							switch (k) {
+							case 0:
+								r = data[len - ++count];
+								break;
+							case 1:
+								g = data[len - ++count];
+								break;
+							case 2:
+								b = data[len - ++count];
+								break;
+							}
+						}
+						// Convert (B, G, R) to (R, G, B)
+						//tmp = data[j];
+						//data[j] = data[j + 2];
+						//data[j + 2] = tmp;
+						// int thisIndex = bfOffBits + biWidth * i + j;
+						tft->drawPixel(i, j, tft->color565(r, g, b));
+					}
+				}
+				delay(2000000);
+			} // 24 bit
+
+			else if (biBitCount == 32) {
+				Serial.println("bmp32 - not currently decoding properly. cannot simply ignore alpha");
+				//int count = bfOffBits;
+				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
+				int extra = 0; // biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
+							   //for (int i = 0; i < biHeight; i++) // rows of data make up height
+				Serial.print("extra=");
+				Serial.println(extra);
+				for (int i = len - 1; i > len - 20; i--) {
+					Serial.print(data[i], HEX);
+					Serial.print(" ");
+				}
+				Serial.println();
+				for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
+				{
+					//count += extra;
+					yield();
+					uint8_t r; uint8_t g; uint8_t b; uint8_t a;
+
+					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
+					for (int j = biWidth - 1; j >= 0; j--)
+					{
+						for (int k = 0; k < 4; k++) {
+							switch (k) {
+							case 0:
+								a = data[len - ++count]; // this is alpha, which we we simply ignore
+								break;
+							case 1:
+								r = data[len - ++count];
+								break;
+							case 2:
+								g = data[len - ++count];
+								break;
+							case 3:
+								b = data[len - ++count];
+								break;
+							}
+							Serial.print(r, HEX);
+							Serial.print(" ");
+							Serial.print(g, HEX);
+							Serial.print(" ");
+							Serial.print(b, HEX);
+							Serial.print(" ");
+							Serial.print(a, HEX);
+							Serial.println();
+
+						}
+						// Convert (B, G, R) to (R, G, B)
+						//tmp = data[j];
+						//data[j] = data[j + 2];
+						//data[j + 2] = tmp;
+						// int thisIndex = bfOffBits + biWidth * i + j;
+						tft->drawPixel(i, j, tft->color565(r, g, b));
+					}
+					Serial.println(len - count);
+				}
+				delay(2000000);
+			} // 32 bit
+
+			else {
+				Serial.print("Unsupported bit depth: ");
+				Serial.println(biBitCount);
+				tft->print("Unsupported bit depth: ");
+				tft->println(biBitCount);
+			}
+
+
+
+			stream->flush();
+			stream->stopAll();
+
+		}
+	}
+	Serial.print(millis() - time, DEC);
+	Serial.println(" ms");
+	http.end();
+}
+
 
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 {
@@ -178,20 +425,25 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+
 			unsigned long DrawTime = millis();
 			// get lenght of document (is -1 when Server sends no Content-Length header)
 			int len = http.getSize();
 			unsigned char* data = new unsigned char[len]; 
 			unsigned char tmp;
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 			WiFiClient * stream = http.getStreamPtr();
 
 			Serial.println("Step 1");
 			int thisBytesAvailable = stream->available();
-
+			Serial.print("thisBytesAvailable = ");
+			Serial.print(thisBytesAvailable);
 			int thisResult = 0;
 			Serial.println("Step 2");
+			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			thisResult = stream->read(data, thisBytesAvailable);
 			int i = thisResult;
 			Serial.print("Initial Read = ");
@@ -280,6 +532,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						}
 					}
 				} // 8 - bit
+
 			else if (biBitCount == 24) {
 				Serial.println("bmp24");
 				//int count = bfOffBits;
@@ -318,6 +571,66 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				}
 				delay(2000000);
 			} // 24 bit
+
+			else if (biBitCount == 32) {
+				Serial.println("bmp32 - not currently decoding properly. cannot simply ignore alpha");
+				//int count = bfOffBits;
+				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
+				int extra = 0; // biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
+										 //for (int i = 0; i < biHeight; i++) // rows of data make up height
+				Serial.print("extra=");
+				Serial.println(extra);
+				for (int i = len-1; i > len - 20; i--) {
+					Serial.print(data[i], HEX);
+					Serial.print(" ");
+				}
+				Serial.println();
+				for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
+				{
+					//count += extra;
+					yield();
+					uint8_t r; uint8_t g; uint8_t b; uint8_t a;
+
+					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
+					for (int j = biWidth - 1; j >= 0; j--)
+					{
+						for (int k = 0; k < 4; k++) {
+							switch (k) {
+							case 0:
+								a = data[len - ++count]; // this is alpha, which we we simply ignore
+								break;
+							case 1:
+								r = data[len - ++count];
+								break;
+							case 2:
+								g = data[len - ++count];
+								break;
+							case 3:
+								b = data[len - ++count];
+								break;
+							}
+							Serial.print(r, HEX);
+							Serial.print(" ");
+							Serial.print(g, HEX);
+							Serial.print(" ");
+							Serial.print(b, HEX);
+							Serial.print(" ");
+							Serial.print(a, HEX);
+							Serial.println();
+
+						}
+						// Convert (B, G, R) to (R, G, B)
+						//tmp = data[j];
+						//data[j] = data[j + 2];
+						//data[j + 2] = tmp;
+						// int thisIndex = bfOffBits + biWidth * i + j;
+						tft->drawPixel(i, j, tft->color565(r, g, b));
+					}
+					Serial.println(len - count);
+				}
+				delay(2000000);
+			} // 32 bit
+
 			else {
 				Serial.print("Unsupported bit depth: ");
 				Serial.println(biBitCount);
@@ -336,6 +649,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 	Serial.println(" ms");
 	http.end();
 }
+
 
 void bmpDraw2(Adafruit_ILI9341 * tft, char * imagePath)
 {
