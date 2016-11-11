@@ -29,6 +29,9 @@ MIT license, all text above must be included in any redistribution
 
 
 // include "ili9341test.h"
+#include "settings.h"
+#include "debughandler.h"
+#include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include "ImageViewer.h"
 #include "wifiConnectHelper.h"
@@ -99,10 +102,23 @@ const char* password = "myPassword";
 
 
 void setup() {
-	Serial.begin(9600);
+	Serial.begin(115200);
 	Serial.println("ILI9341 Test!");
 
 	tft.begin();
+
+	delay(20);
+	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
+	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
+	delay(20);
+	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
+	delay(20);
+	tft.fillScreen(ILI9341_BLACK);
+	delay(20);
+	tft.setRotation(2);
+	tft.drawRect(0, 0, 240, 320, 0x00FF);
+	delay(20);
+
 
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(ssid, password);
@@ -119,9 +135,26 @@ void setup() {
 	Serial.println("");
 	Serial.println(WiFi.localIP());
 
+	tft.setCursor(0, 0);
+	// http://healthagency.slocounty.ca.gov/macVPN/24bit.bmp
+	bmpDraw(&tft, "http://gojimmypi-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
+	delay(2000);
+
+	tft.setCursor(0, 0);
+	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/256color.bmp");
+	delay(2000);
+
+	tft.setCursor(0, 0);
+	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/16color.bmp");
+	delay(2000);
+
+	tft.setCursor(0, 0);
+	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/mono.bmp");
+	delay(2000);
 	// Hello World!
 	
-	dldDImage(&tft, 0, 0);
+	tft.setCursor(0, 0);
+	//dldDImage(&tft, 0, 0);
 
 	// read diagnostics (optional but can help debug problems)
 	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
@@ -190,7 +223,7 @@ void setup() {
 
 
 void loop(void) {
-	tft.setRotation(1);
+	tft.setRotation(3);
 
 	testText();
 	delay(2000);
@@ -211,12 +244,12 @@ unsigned long testText() {
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
 	tft.println("Hello World!");
 	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
-	tft.println(1234.56);
+	tft.println("Productivity:");
 	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
-	tft.println(0x121212, HEX);
+	tft.println("  35%");
 	tft.setTextColor(ILI9341_GREEN);
 	//tft.setTextSize(5);
-	tft.println("Bisous!");
+	tft.println("");
 	//tft.setTextSize(2);
 	return micros() - start;
 }

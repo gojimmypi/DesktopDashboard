@@ -14,7 +14,8 @@
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert
 // http://jeplans.com/default.php?targp=ESP2Electronics2
-//
+// http://stackoverflow.com/questions/5751749/how-can-i-read-bmp-pixel-values-into-an-array
+// https://msdn.microsoft.com/en-us/library/dd183391(v=vs.85).aspx
 
 int ah2i(uint8_t s)
 {
@@ -186,9 +187,11 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 			Serial.println(len);
 			WiFiClient * stream = http.getStreamPtr();
 
+			Serial.println("Step 1");
 			int thisBytesAvailable = stream->available();
 
 			int thisResult = 0;
+			Serial.println("Step 2");
 			thisResult = stream->read(data, thisBytesAvailable);
 			int i = thisResult;
 			Serial.print("Initial Read = ");
@@ -286,7 +289,6 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				for (int i = biHeight -1; i >= 0; i--) // rows of data make up height
 				{
 					count += extra;
-					thisWait = 0;
 					yield();
 					uint8_t r; uint8_t g; uint8_t b;
 
@@ -552,7 +554,8 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 	// configure server and url
 	//char * imagePath = "http://beanstalk.azurewebsites.net/helloworld.png";
 	//char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
-	char * imagePath = "http://healthagency.slocounty.ca.gov/macVPN/newimage.bin";
+	char * imagePath = "http://gojimmypi-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=320";
+
 	http.begin(imagePath);
 	Serial.print("[HTTP] GET...\n");
 	Serial.print(imagePath);
