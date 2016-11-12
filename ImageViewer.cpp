@@ -16,6 +16,15 @@
 // http://jeplans.com/default.php?targp=ESP2Electronics2
 // http://stackoverflow.com/questions/5751749/how-can-i-read-bmp-pixel-values-into-an-array
 // https://msdn.microsoft.com/en-us/library/dd183391(v=vs.85).aspx
+// http://www.instructables.com/id/Arduino-TFT-display-of-bitmap-images-from-an-SD-Ca/?ALLSTEPS
+// https://github.com/Bodmer/TFT_ILI9341
+// https://github.com/magore/esp8266_ili9341
+// https://github.com/adafruit/Adafruit-GFX-Library
+// http://stackoverflow.com/questions/19131556/how-to-get-rgb888-24-bit-and-rgb565-16-bit-framebuffer-dump-from-a-jpg-ima
+// http://www.avrfreaks.net/forum/displaying-image-tft-display
+// https://en.wikipedia.org/wiki/RGBA_color_space
+// https://sourceforge.net/projects/easybmp/?source=typ_redirect
+// https://bytes.com/topic/c/answers/554304-using-32-bit-bitmaps-c
 
 int ah2i(uint8_t s)
 {
@@ -166,7 +175,7 @@ boolean bmpReadHeader(WiFiClient * f)
 
 
 
-int len;
+int len = 1;
 unsigned char* data = new unsigned char[len];
 int currentStreamPosition = 0;
 int currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
@@ -185,25 +194,33 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 				thisPayloadBytesAvailable = stream->available();
 			}
 			if (thisPayloadBytesAvailable > 0) {
+				delete data; // without deleting old data, we run out of heap space!
+				data = new unsigned char[thisPayloadBytesAvailable]; // allocation of just enough memory for this incremenal payload of data
 				Serial.print("Reading.... ");
 				yield();
-				thisPayloadByteCount = stream->read(data + totalBytesRead, thisPayloadBytesAvailable);
+				
+				//thisPayloadByteCount = stream->read(data + totalBytesRead, thisPayloadBytesAvailable); // the old code appended to one big data array
+
+				thisPayloadByteCount = stream->read(data, thisPayloadBytesAvailable);
 				currentStreamPosition = totalBytesRead + 1; // the prior [total bytes read] + 1 is the new stream position
 				totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
 				Serial.print(thisPayloadByteCount);
 				Serial.println(" bytes. Done.");
-				foundPayload = true;
+				foundPayload = true; // once we find and read the next payload, we exit
+				Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+				Serial.print("  total read = ");
+				Serial.println(totalBytesRead);
 			}
 		}
 	}
-	return data[position]; // TODO, reference position in payload only, not full stream
+	return data[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
 }
 void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 {
 	HTTPClient http;
 	http.begin(imagePath);
 
-	Serial.print("Starting bmpDrawFromUrl 1.00: ");
+	Serial.print("Starting bmpDrawFromUrl 1.01: ");
 	Serial.print(imagePath);
 	Serial.print("  -  ");
 	uint32_t time = millis();
@@ -218,23 +235,24 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			unsigned long DrawTime = millis();
 			// get lenght of document (is -1 when Server sends no Content-Length header)
 			 len = http.getSize();
-			 data = new unsigned char[len];
 			unsigned char tmp;
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 			WiFiClient * stream = http.getStreamPtr();
 			
-			//unsigned char testChar = byteInStream(stream, 1); // test only TODO remove
+			unsigned char testChar = byteInStream(stream, 1); // test only TODO remove
 
 			Serial.println("Step 1");
-			int thisBytesAvailable = stream->available();
-			Serial.print("thisBytesAvailable = ");
-			Serial.print(thisBytesAvailable);
-			Serial.println("Step 2");
+//			int thisBytesAvailable = stream->available();
+//			data = new unsigned char[thisBytesAvailable];
+//
+//			Serial.print("thisBytesAvailable = ");
+//			Serial.print(thisBytesAvailable);
+//			Serial.println("Step 2");
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 
-			totalBytesRead = stream->read(data, thisBytesAvailable);
+//			totalBytesRead = stream->read(data, thisBytesAvailable);
 			Serial.print("Initial Read = ");
 			Serial.println(totalBytesRead);
 
@@ -276,9 +294,10 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			int maxWait = 100;
 			int thisWait = 0;
 
+			// moved to byteInStream
 			//int thisBytesRead = HEADER_SIZE;
-			Serial.print("Initial bytes available: ");
-			Serial.println(thisBytesAvailable);
+			//Serial.print("Initial bytes available: ");
+			//Serial.println(thisBytesAvailable);
 			//while (i < len) {
 			//	thisBytesAvailable = stream->available();
 			//	if ((i < len) && (thisBytesAvailable == 0)) {
@@ -366,11 +385,14 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 				int count = bfOffBits; // note that we start at the START of the data [biSizeImag]  and work ourselves to the END of the data
 				//int extra = 0; // The nubmer of bytes in a row (cols) will already be a multiple of 4. (32 / 8) so we don'n need to pad with extra bytes as done in 24 bit
 
-				for (int i = len - 1; i > len - 20; i--) {
-					Serial.print(data[i], HEX);
-					Serial.print(" ");
+				// show the first chunk of data 
+				for (int j = 0; j < 66; j++) {
+					for (int i = 0; i < 16; i++) {
+						Serial.print(data[(j * 16) + i], HEX);
+						Serial.print(" ");
+					}
+					Serial.println();
 				}
-				Serial.println();
 				//for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
 				for (int i = 0; i < biHeight; i++) // rows of data make up height
 				{
@@ -395,24 +417,19 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 								b = byteInStream(stream, count++); // blue
 								break;
 							}
-							Serial.print(count);
-							Serial.print(" : ");
-							Serial.print(r, HEX);
-							Serial.print(" ");
-							Serial.print(g, HEX);
-							Serial.print(" ");
-							Serial.print(b, HEX);
-							Serial.print(" ");
-							Serial.print(a, HEX);
-							Serial.println();
+							yield();
+							//Serial.print(count);
+							//Serial.print(" : ");
+							//Serial.print(r, HEX);
+							//Serial.print(" ");
+							//Serial.print(g, HEX);
+							//Serial.print(" ");
+							//Serial.print(b, HEX);
+							//Serial.print(" ");
+							//Serial.print(a, HEX);
+							//Serial.println();
 
 						}
-						// Convert (B, G, R) to (R, G, B)
-						//tmp = data[j];
-						//data[j] = data[j + 2];
-						//data[j + 2] = tmp;
-						// int thisIndex = bfOffBits + biWidth * i + j;
-						//tft->drawPixel(biHeight - i, biWidth - j, tft->color565(r, g, b));
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
 					Serial.println(len - count);
