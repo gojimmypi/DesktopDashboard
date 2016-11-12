@@ -1,3 +1,4 @@
+// ImageViewer.h
 // 
 // 
 // 
@@ -10,10 +11,14 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 
-// ImageViewer.h
+const int ESP_MIN_HEAP = 2048;
+
 //
-// code based on ESP8266 WiFi Image Viewer by James Eckert
-// http://jeplans.com/default.php?targp=ESP2Electronics2
+// code based on ESP8266 WiFi Image Viewer by James Eckert - http://jeplans.com/default.php?targp=ESP2Electronics2
+// (although I was never able to get that PHP conversion to work, so I wrote my own in ASP.Net)
+// see https://github.com/gojimmypi/imageConvert2BMP
+
+// Other resources that I found helpful:
 // http://stackoverflow.com/questions/5751749/how-can-i-read-bmp-pixel-values-into-an-array
 // https://msdn.microsoft.com/en-us/library/dd183391(v=vs.85).aspx
 // http://www.instructables.com/id/Arduino-TFT-display-of-bitmap-images-from-an-SD-Ca/?ALLSTEPS
@@ -176,7 +181,7 @@ boolean bmpReadHeader(WiFiClient * f)
 
 
 int len = 1;
-unsigned char* data = new unsigned char[len];
+unsigned char* pImageBMP;
 int currentStreamPosition = 0;
 int currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
 int totalBytesRead = 0;
@@ -195,14 +200,20 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 				thisPayloadBytesAvailable = stream->available();
 			}
 			if (thisPayloadBytesAvailable > 0) {
-				delete data; // without deleting old data, we run out of heap space!
-				data = new unsigned char[thisPayloadBytesAvailable]; // allocation of just enough memory for this incremenal payload of data
+				if (thisPayloadBytesAvailable < ESP.getFreeHeap() - ESP_MIN_HEAP) {
+					delete pImageBMP; // without deleting old data, we run out of heap space!
+					pImageBMP = new unsigned char[thisPayloadBytesAvailable]; // allocation of just enough memory for this incremenal payload of data
+				}
+				else {
+					Serial.println("Out of heap space while rendering!");
+					return (uint8_t) 0;
+				}
 				//Serial.print("Reading.... ");
 				yield();
 				
 				//thisPayloadByteCount = stream->read(data + totalBytesRead, thisPayloadBytesAvailable); // the old code appended to one big data array
 
-				thisPayloadByteCount = stream->read(data, thisPayloadBytesAvailable);
+				thisPayloadByteCount = stream->read(pImageBMP, thisPayloadBytesAvailable);
 				currentStreamPosition = totalBytesRead + 1; // the prior [total bytes read] + 1 is the new stream position
 				totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
 				//Serial.print(thisPayloadByteCount);
@@ -218,19 +229,31 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 		//Serial.println(" millis to read.");
 
 	}
-	return data[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
+	return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
 }
 void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 {
-	HTTPClient http;
-	http.begin(imagePath);
+	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed
+	uint32_t time = millis();
 
-	Serial.print("Starting bmpDrawFromUrl 1.01: ");
+	Serial.print("Starting bmpDrawFromUrl 1.02: ");
 	Serial.print(imagePath);
 	Serial.print("  -  ");
-	uint32_t time = millis();
+
+	currentStreamPosition = 0;
+	currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
+	totalBytesRead = 0;
+	len = 1;
+
+	Serial.println("Begin HTTP");
+	HTTPClient http;
+	http.begin(imagePath);
+	if (!http.connected()) {
+		Serial.println("HTTPClient not connected. Aborting bmpDrawFromUrl");
+	}
+	Serial.println("End HTTP");
+
 	int httpCode = http.GET();
-	Serial.println(httpCode);
 	if (httpCode > 0) {
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
@@ -248,7 +271,8 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			
 			unsigned char testChar = byteInStream(stream, 1); // test only TODO remove
 
-			Serial.println("Step 1");
+			Serial.print("Step 1 ");
+			Serial.println(testChar);
 //			int thisBytesAvailable = stream->available();
 //			data = new unsigned char[thisBytesAvailable];
 //
@@ -266,13 +290,13 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			// stream->read(info, HEADER_SIZE); // read the 54-byte header
 
 			// extract image height and width from header
-			int bfOffBits = read32(data, 10); //  *(int*)&data[10]; // typically 1078 
+			int bfOffBits = read32(pImageBMP, 10); //  *(int*)&data[10]; // typically 1078 
 
-			int biSize = read32(data, 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
-			int biWidth = read32(data, 18); // *(int*)data + 18;
-			int biHeight = read32(data, 22); // *(int*)data + 22;
-			int biBitCount = read32(data, 28); // Specifies the number of bits per pixel.
-			int biSizeImage = read32(data, 34); // *(int*)data + 34;
+			int biSize = read32(pImageBMP, 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
+			int biWidth = read32(pImageBMP, 18); // *(int*)data + 18;
+			int biHeight = read32(pImageBMP, 22); // *(int*)data + 22;
+			int biBitCount = read32(pImageBMP, 28); // Specifies the number of bits per pixel.
+			int biSizeImage = read32(pImageBMP, 34); // *(int*)data + 34;
 
 			Serial.print("filelen = ");
 			Serial.println(len);
@@ -344,7 +368,7 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 					//}
 					for (int j = 0; j < biWidth; j++)
 					{
-						tft->drawPixel(j, i, data[bfOffBits + biWidth * i + j]);
+						tft->drawPixel(j, i, pImageBMP[bfOffBits + biWidth * i + j]);
 					}
 				}
 			} // end of 8 - bit
@@ -353,9 +377,9 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			  // 24 bit BMP handler
 			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 24) {
-				Serial.println("bmp24");
+				Serial.println("Rendering 24 bit bmpDrawFromUrl");
 				//int count = bfOffBits;
-				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
+				int count = 0; // note that we start at the START of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
 				int extra = biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
 										 //for (int i = 0; i < biHeight; i++) // rows of data make up height
 				for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
@@ -370,26 +394,26 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 						for (int k = 0; k < 3; k++) {
 							switch (k) {
 							case 0:
-								r = data[len - ++count];
+								b = byteInStream(stream, count++); // r = data[len - ++count];
 								break;
 							case 1:
-								g = data[len - ++count];
+								g = pImageBMP[len - ++count];
 								break;
 							case 2:
-								b = data[len - ++count];
+								r = byteInStream(stream, count++); // b = data[len - ++count];
 								break;
 							}
 						}
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
 				}
-				delay(2000000);
 			} // 24 bit
 
 			  // ***************************************************************************************************************************************************************
 			  // 32 bit BMP handler
 			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 32) {
+				Serial.println("Rendering 32 bit bmpDrawFromUrl");
 				int count = bfOffBits; // note that we start at the START of the data [biSizeImag]  and work ourselves to the END of the data
 				//int extra = 0; // The nubmer of bytes in a row (cols) will already be a multiple of 4. (32 / 8) so we don'n need to pad with extra bytes as done in 24 bit
 
@@ -443,7 +467,6 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 					// Serial.println("Current index: ");
 					// Serial.println(len - count);
 				}
-				delay(2000000);
 			} // 32 bit
 
 			else {
@@ -452,33 +475,36 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 				tft->print("Unsupported bit depth: ");
 				tft->println(biBitCount);
 			}
-
-
-
 			stream->flush();
 			stream->stopAll();
+			delete pImageBMP; // once we process the data, we're done with it.
+		} // http file found
+		else
+		{
+			Serial.print("HTTP ");
+			Serial.println(httpCode);
 		}
 	}
-	delete data; // once we process the data, we're done with it.
+
+	http.end();
 	Serial.print(millis() - time, DEC);
 	Serial.println(" ms");
-	http.end();
 }
 
-
+// bmpDraw - load entire image into memory, then render it
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 {
+	uint32_t time = millis();
+	Serial.print("Starting bmpDraw 1.02: ");
+	Serial.print(imagePath);
+	Serial.print("  -  ");
+
 	HTTPClient http;
 	http.begin(imagePath);
 
-	Serial.print("Starting bmpDraw 1.01: ");
-	Serial.print(imagePath);
-	Serial.print("  -  ");
-	uint32_t time = millis();
 	int httpCode = http.GET();
-	Serial.println(httpCode);
 	if (httpCode > 0) {
-		// HTTP header has been send and Server response header has been handled
+		// HTTP header has been sent and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
@@ -486,7 +512,15 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 			unsigned long DrawTime = millis();
 			// get lenght of document (is -1 when Server sends no Content-Length header)
 			int len = http.getSize();
-			unsigned char* data = new unsigned char[len]; 
+			if (len < (ESP.getFreeHeap() - ESP_MIN_HEAP)) {
+				pImageBMP = new unsigned char[len]; // allocation of just enough memory for this incremenal payload of data
+			}
+			else {
+				Serial.println("Not enough space while rendering! (try bmpDrawFromUrl, instead).");
+				Serial.println();
+				Serial.println();
+				return;
+			}
 			unsigned char tmp;
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
@@ -500,7 +534,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 			int thisResult = 0;
 			Serial.println("Step 2");
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
-			thisResult = stream->read(data, thisBytesAvailable);
+			thisResult = stream->read(pImageBMP, thisBytesAvailable);
 			int i = thisResult;
 			Serial.print("Initial Read = ");
 			Serial.println(i);
@@ -510,13 +544,13 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 			// stream->read(info, HEADER_SIZE); // read the 54-byte header
 
 									// extract image height and width from header
-			int bfOffBits = read32(data, 10); //  *(int*)&data[10]; // typically 1078 
+			int bfOffBits = read32(pImageBMP, 10); //  *(int*)&data[10]; // typically 1078 
 
-			int biSize = read32(data , 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
-			int biWidth = read32(data, 18); // *(int*)data + 18;
-			int biHeight = read32(data, 22); // *(int*)data + 22;
-			int biBitCount = read32(data, 28); // Specifies the number of bits per pixel.
-			int biSizeImage = read32(data, 34); // *(int*)data + 34;
+			int biSize = read32(pImageBMP , 14); // Specifies the size of the BITMAPINFOHEADER structure, in bytes. (typically 40 bytes)
+			int biWidth = read32(pImageBMP, 18); // *(int*)data + 18;
+			int biHeight = read32(pImageBMP, 22); // *(int*)data + 22;
+			int biBitCount = read32(pImageBMP, 28); // Specifies the number of bits per pixel.
+			int biSizeImage = read32(pImageBMP, 34); // *(int*)data + 34;
 
 			Serial.print("filelen = ");
 			Serial.println(len);
@@ -555,7 +589,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				if (thisBytesAvailable > 0) {
 					Serial.print("Reading.... ");
 					yield();
-					thisResult = stream->read(data + i, thisBytesAvailable);
+					thisResult = stream->read(pImageBMP + i, thisBytesAvailable);
 					i += thisResult;
 					Serial.print(thisResult);
 					Serial.println(" bytes. Done.");
@@ -584,7 +618,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						//}
 						for (int j = 0; j < biWidth; j++)
 						{
-							tft->drawPixel(j, i, data[bfOffBits + biWidth * i + j]);
+							tft->drawPixel(j, i, pImageBMP[bfOffBits + biWidth * i + j]);
 						}
 					}
 				} // 8 - bit
@@ -607,13 +641,13 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						for (int k = 0; k < 3; k++) {
 							switch (k) {
 							case 0:
-								 r= data[len - ++count];
+								 r= pImageBMP[len - ++count];
 								break;
 							case 1:
-								 g = data[len - ++count];
+								 g = pImageBMP[len - ++count];
 								break;
 							case 2:
-								 b = data[len - ++count];
+								 b = pImageBMP[len - ++count];
 								break;
 							}
 						}
@@ -625,11 +659,10 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
 				}
-				delay(2000000);
 			} // 24 bit
 
 			else if (biBitCount == 32) {
-				Serial.println("bmp32 - not currently decoding properly. cannot simply ignore alpha");
+				Serial.println("bmpDraw render 32 bit");
 				//int count = bfOffBits;
 				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
 				int extra = 0; // biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
@@ -637,7 +670,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				Serial.print("extra=");
 				Serial.println(extra);
 				for (int i = len-1; i > len - 20; i--) {
-					Serial.print(data[i], HEX);
+					Serial.print(pImageBMP[i], HEX);
 					Serial.print(" ");
 				}
 				Serial.println();
@@ -653,38 +686,32 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						for (int k = 0; k < 4; k++) {
 							switch (k) {
 							case 0:
-								a = data[len - ++count]; // this is alpha, which we we simply ignore
+								a = pImageBMP[len - ++count]; // this is alpha, which we we simply ignore
 								break;
 							case 1:
-								r = data[len - ++count];
+								r = pImageBMP[len - ++count];
 								break;
 							case 2:
-								g = data[len - ++count];
+								g = pImageBMP[len - ++count];
 								break;
 							case 3:
-								b = data[len - ++count];
+								b = pImageBMP[len - ++count];
 								break;
 							}
-							Serial.print(r, HEX);
-							Serial.print(" ");
-							Serial.print(g, HEX);
-							Serial.print(" ");
-							Serial.print(b, HEX);
-							Serial.print(" ");
-							Serial.print(a, HEX);
-							Serial.println();
+							//Serial.print(r, HEX);
+							//Serial.print(" ");
+							//Serial.print(g, HEX);
+							//Serial.print(" ");
+							//Serial.print(b, HEX);
+							//Serial.print(" ");
+							//Serial.print(a, HEX);
+							//Serial.println();
 
 						}
-						// Convert (B, G, R) to (R, G, B)
-						//tmp = data[j];
-						//data[j] = data[j + 2];
-						//data[j + 2] = tmp;
-						// int thisIndex = bfOffBits + biWidth * i + j;
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
 					Serial.println(len - count);
 				}
-				delay(2000000);
 			} // 32 bit
 
 			else {
@@ -698,7 +725,11 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 
 			stream->flush();
 			stream->stopAll();
-
+			delete pImageBMP;
+		} // if httpcode = 200
+		else {
+			Serial.print("HTTP ");
+			Serial.println(httpCode);
 		}
 	}
 	Serial.print(millis() - time, DEC);
