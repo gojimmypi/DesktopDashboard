@@ -187,6 +187,7 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 	boolean foundPayload = false;
 
 	if (position > totalBytesRead) {
+		int startMillis = millis();
 		while ((totalBytesRead < len) && (!foundPayload)) {
 			thisPayloadBytesAvailable = stream->available();
 			if ((totalBytesRead < len) && (thisPayloadBytesAvailable == 0)) {
@@ -196,7 +197,7 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 			if (thisPayloadBytesAvailable > 0) {
 				delete data; // without deleting old data, we run out of heap space!
 				data = new unsigned char[thisPayloadBytesAvailable]; // allocation of just enough memory for this incremenal payload of data
-				Serial.print("Reading.... ");
+				//Serial.print("Reading.... ");
 				yield();
 				
 				//thisPayloadByteCount = stream->read(data + totalBytesRead, thisPayloadBytesAvailable); // the old code appended to one big data array
@@ -204,14 +205,18 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 				thisPayloadByteCount = stream->read(data, thisPayloadBytesAvailable);
 				currentStreamPosition = totalBytesRead + 1; // the prior [total bytes read] + 1 is the new stream position
 				totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
-				Serial.print(thisPayloadByteCount);
-				Serial.println(" bytes. Done.");
+				//Serial.print(thisPayloadByteCount);
+				//Serial.println(" bytes. Done.");
 				foundPayload = true; // once we find and read the next payload, we exit
-				Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
-				Serial.print("  total read = ");
-				Serial.println(totalBytesRead);
+				//Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+				//Serial.print("  total read = ");
+				//Serial.println(totalBytesRead);
 			}
 		}
+		//typically less than 1 milis to read
+		//Serial.print(millis() - startMillis);
+		//Serial.println(" millis to read.");
+
 	}
 	return data[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
 }
@@ -316,13 +321,16 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			//}
 			Serial.print("Render! totalBytesRead = ");
 			Serial.println(totalBytesRead);
+			
 			if (biBitCount == 1) {
 				Serial.println("B/W not rendered");
 				tft->println("B/W not rendered");
 			} // BW
+
 			else if (biBitCount == 4) {
 				Serial.println("4 bit not rendered");
 			} // 4 - bit
+			
 			else if (biBitCount == 8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
 				Serial.println("8 bit pic");
 				tft->println("8-bit not rendered");
@@ -339,8 +347,11 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 						tft->drawPixel(j, i, data[bfOffBits + biWidth * i + j]);
 					}
 				}
-			} // 8 - bit
+			} // end of 8 - bit
 
+			  // ***************************************************************************************************************************************************************
+			  // 24 bit BMP handler
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 24) {
 				Serial.println("bmp24");
 				//int count = bfOffBits;
@@ -369,40 +380,37 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 								break;
 							}
 						}
-						// Convert (B, G, R) to (R, G, B)
-						//tmp = data[j];
-						//data[j] = data[j + 2];
-						//data[j + 2] = tmp;
-						// int thisIndex = bfOffBits + biWidth * i + j;
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
 				}
 				delay(2000000);
 			} // 24 bit
 
+			  // ***************************************************************************************************************************************************************
+			  // 32 bit BMP handler
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 32) {
-				//int count = bfOffBits;
 				int count = bfOffBits; // note that we start at the START of the data [biSizeImag]  and work ourselves to the END of the data
 				//int extra = 0; // The nubmer of bytes in a row (cols) will already be a multiple of 4. (32 / 8) so we don'n need to pad with extra bytes as done in 24 bit
 
 				// show the first chunk of data 
-				for (int j = 0; j < 66; j++) {
-					for (int i = 0; i < 16; i++) {
-						Serial.print(data[(j * 16) + i], HEX);
-						Serial.print(" ");
-					}
-					Serial.println();
-				}
+				//for (int j = 0; j < 66; j++) {
+				//	for (int i = 0; i < 16; i++) {
+				//		Serial.print(data[(j * 16) + i], HEX);
+				//		Serial.print(" ");
+				//	}
+				//	Serial.println();
+				//}
 				//for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
-				for (int i = 0; i < biHeight; i++) // rows of data make up height
+				for (int i = 0; i < biHeight; i++) // [biHeight] rows of data make up height of our image
 				{
-					//count += extra;
-					yield();
+					//count += extra; // we don't need to pad to 4 byte boundries, as 32 bits is already 4 bytes!  (note difference from 24 bit rendering)
+					yield(); // give the OS a bit of time after showing each row.
 					uint8_t r; uint8_t g; uint8_t b; uint8_t a;
 
 					for (int j = 0; j < biWidth; j++)
 					{
-						for (int k = 0; k < 4; k++) {
+						for (int k = 0; k < 4; k++) { // there are 4 bytes per pixel: BGRA
 							switch (k) {
 							case 3:
 								a = byteInStream(stream, count++); // data[count++]; // this is alpha, which we we simply ignore. TODO what if it is not 0xFF?
@@ -417,7 +425,7 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 								b = byteInStream(stream, count++); // blue
 								break;
 							}
-							yield();
+							// show the pixel datan (this can REALLY slow down a rendering, particularly for full screen)
 							//Serial.print(count);
 							//Serial.print(" : ");
 							//Serial.print(r, HEX);
@@ -432,7 +440,8 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 						}
 						tft->drawPixel(i, j, tft->color565(r, g, b));
 					}
-					Serial.println(len - count);
+					// Serial.println("Current index: ");
+					// Serial.println(len - count);
 				}
 				delay(2000000);
 			} // 32 bit
@@ -448,9 +457,9 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 
 			stream->flush();
 			stream->stopAll();
-
 		}
 	}
+	delete data; // once we process the data, we're done with it.
 	Serial.print(millis() - time, DEC);
 	Serial.println(" ms");
 	http.end();
