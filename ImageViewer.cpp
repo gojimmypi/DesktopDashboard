@@ -12,6 +12,8 @@
 #include "Adafruit_ILI9341.h"
 
 const int ESP_MIN_HEAP = 2048;
+#define SCREEN_WIDTH 320
+#define SCREEN_HEIGHT 240
 
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert - http://jeplans.com/default.php?targp=ESP2Electronics2
@@ -218,10 +220,10 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 				totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
 				//Serial.print(thisPayloadByteCount);
 				//Serial.println(" bytes. Done.");
-				foundPayload = true; // once we find and read the next payload, we exit
 				//Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 				//Serial.print("  total read = ");
 				//Serial.println(totalBytesRead);
+				foundPayload = true; // once we find and read the next payload, we exit the while loop 
 			}
 		}
 		//typically less than 1 milis to read
@@ -229,9 +231,18 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 		//Serial.println(" millis to read.");
 
 	}
-	return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
+	int thisPayloadPosition = position - currentStreamPosition + 1;
+	if (thisPayloadPosition >= 0) {
+		return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
+	}
+	else {
+		return (uint8_t) 0;
+		Serial.println("Error: requested position not currently in memory (currently supporting forward-reading only)");
+	}
+
 }
-void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
+
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath)
 {
 	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed
 	uint32_t time = millis();
@@ -245,15 +256,14 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 	totalBytesRead = 0;
 	len = 1;
 
-	Serial.println("Begin HTTP");
 	HTTPClient http;
 	http.begin(imagePath);
-	if (!http.connected()) {
-		Serial.println("HTTPClient not connected. Aborting bmpDrawFromUrl");
-	}
-	Serial.println("End HTTP");
 
 	int httpCode = http.GET();
+	//if (!http.connected()) {
+	//	Serial.println("HTTPClient not connected. Aborting bmpDrawFromUrl");
+	//	return;
+	//}
 	if (httpCode > 0) {
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
@@ -346,15 +356,24 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			Serial.print("Render! totalBytesRead = ");
 			Serial.println(totalBytesRead);
 			
+			// ***************************************************************************************************************************************************************
+			//  
+			// ***************************************************************************************************************************************************************
 			if (biBitCount == 1) {
 				Serial.println("B/W not rendered");
 				tft->println("B/W not rendered");
 			} // BW
 
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 4) {
 				Serial.println("4 bit not rendered");
 			} // 4 - bit
 			
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
 				Serial.println("8 bit pic");
 				tft->println("8-bit not rendered");
@@ -469,6 +488,9 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 				}
 			} // 32 bit
 
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else {
 				Serial.print("Unsupported bit depth: ");
 				Serial.println(biBitCount);
@@ -480,7 +502,7 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 			delete pImageBMP; // once we process the data, we're done with it.
 		} // http file found
 		else
-		{
+		{ // show an HTTP error code
 			Serial.print("HTTP ");
 			Serial.println(httpCode);
 		}
@@ -492,6 +514,9 @@ void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath)
 }
 
 // bmpDraw - load entire image into memory, then render it
+// ***************************************************************************************************************************************************************
+//  
+// ***************************************************************************************************************************************************************
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 {
 	uint32_t time = millis();
@@ -512,17 +537,30 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 			unsigned long DrawTime = millis();
 			// get lenght of document (is -1 when Server sends no Content-Length header)
 			int len = http.getSize();
+
+			if (len < 1) {
+				Serial.println("Error: Bad content length.");
+				Serial.println();
+				Serial.println();
+				return;
+			}
 			if (len < (ESP.getFreeHeap() - ESP_MIN_HEAP)) {
 				pImageBMP = new unsigned char[len]; // allocation of just enough memory for this incremenal payload of data
 			}
 			else {
-				Serial.println("Not enough space while rendering! (try bmpDrawFromUrl, instead).");
+				Serial.println("Not enough heap space while rendering!\n\r (try bmpDrawFromUrlStream, instead).");
+				Serial.print(ESP.getFreeHeap());
+				Serial.println(" heap bytes free.");
+				Serial.print(ESP_MIN_HEAP);
+				Serial.println(" minimum bytes free configured.");
+				Serial.print(len);
+				Serial.println(" bytes needed for this image.");
 				Serial.println();
 				Serial.println();
 				return;
 			}
 			unsigned char tmp;
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			Serial.printf("After allocation heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 			WiFiClient * stream = http.getStreamPtr();
@@ -587,42 +625,57 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 					thisBytesAvailable = stream->available();
 				}
 				if (thisBytesAvailable > 0) {
-					Serial.print("Reading.... ");
+					//Serial.print("Reading.... ");
 					yield();
 					thisResult = stream->read(pImageBMP + i, thisBytesAvailable);
 					i += thisResult;
-					Serial.print(thisResult);
-					Serial.println(" bytes. Done.");
-					delay(1);
+					//Serial.print(thisResult);
+					//Serial.println(" bytes. Done.");
+					//delay(1);
 				}
 			}
 			Serial.print("Render! i = ");
 			Serial.println(i);
+
+			// ***************************************************************************************************************************************************************
+			//  
+			// ***************************************************************************************************************************************************************
 			if (biBitCount == 1) {
 				Serial.println("B/W not rendered");
 				tft->println("B/W not rendered");
 			} // BW
+
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 4) {
 				Serial.println("4 bit not rendered");
 			} // 4 - bit
-			else if (biBitCount ==8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
+
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
+			else if (biBitCount == 8) { // (((biWidth * biHeight) + HEADER_SIZE) == len) {
 				Serial.println("8 bit pic");
 				tft->println("8-bit not rendered");
 				for (int i = 0; i < biHeight; i++)
+				{
+					thisWait = 0;
+					yield();
+					//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
+					//	Serial.print(".");
+					//	delay(10);
+					//}
+					for (int j = 0; j < biWidth; j++)
 					{
-						thisWait = 0;
-						yield();
-						//while ((stream->available() == 0) && (thisWait++ < maxWait)) {
-						//	Serial.print(".");
-						//	delay(10);
-						//}
-						for (int j = 0; j < biWidth; j++)
-						{
-							tft->drawPixel(j, i, pImageBMP[bfOffBits + biWidth * i + j]);
-						}
+						tft->drawPixel(j, i, pImageBMP[bfOffBits + biWidth * i + j]);
 					}
-				} // 8 - bit
+				}
+			} // 8 - bit
 
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 24) {
 				Serial.println("bmp24");
 				//int count = bfOffBits;
@@ -651,29 +704,27 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 								break;
 							}
 						}
-						// Convert (B, G, R) to (R, G, B)
-						//tmp = data[j];
-						//data[j] = data[j + 2];
-						//data[j + 2] = tmp;
-						// int thisIndex = bfOffBits + biWidth * i + j;
-						tft->drawPixel(i, j, tft->color565(r, g, b));
+						tft->drawPixel(i, j, tft->color565(r, g, b)); 
 					}
 				}
 			} // 24 bit
 
+			  // ***************************************************************************************************************************************************************
+			  //  
+			  // ***************************************************************************************************************************************************************
 			else if (biBitCount == 32) {
 				Serial.println("bmpDraw render 32 bit");
 				//int count = bfOffBits;
 				int count = 0; // note that we start at the END of the data [biSizeImage - count++]  and work ourselves to the beginning of the data
-				int extra = 0; // biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
+				// int extra = 0; // biWidth % 4; // The nubmer of bytes in a row (cols) will be a multiple of 4.
 										 //for (int i = 0; i < biHeight; i++) // rows of data make up height
-				Serial.print("extra=");
-				Serial.println(extra);
-				for (int i = len-1; i > len - 20; i--) {
-					Serial.print(pImageBMP[i], HEX);
-					Serial.print(" ");
-				}
-				Serial.println();
+
+				// preint a preview of data
+				//for (int i = len-1; i > len - 20; i--) {
+				//	Serial.print(pImageBMP[i], HEX);
+			    // 		Serial.print(" ");
+				//}
+				//Serial.println();
 				for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
 				{
 					//count += extra;
@@ -686,16 +737,17 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 						for (int k = 0; k < 4; k++) {
 							switch (k) {
 							case 0:
-								a = pImageBMP[len - ++count]; // this is alpha, which we we simply ignore
+								a = pImageBMP[len - ++count]; // this is alpha, which we we simply ignore 
+								                              // if this line is commented out, don't forgot to still increment [count]
 								break;
 							case 1:
-								r = pImageBMP[len - ++count];
+								r = pImageBMP[len - ++count]; // red
 								break;
 							case 2:
-								g = pImageBMP[len - ++count];
+								g = pImageBMP[len - ++count]; // green
 								break;
 							case 3:
-								b = pImageBMP[len - ++count];
+								b = pImageBMP[len - ++count]; // blue
 								break;
 							}
 							//Serial.print(r, HEX);
@@ -708,9 +760,8 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 							//Serial.println();
 
 						}
-						tft->drawPixel(i, j, tft->color565(r, g, b));
+						tft->drawPixel(i, j, tft->color565(r, g, b)); // show the pixel!
 					}
-					Serial.println(len - count);
 				}
 			} // 32 bit
 
@@ -720,8 +771,6 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				tft->print("Unsupported bit depth: ");
 				tft->println(biBitCount);
 			}
-
-
 
 			stream->flush();
 			stream->stopAll();
@@ -841,8 +890,6 @@ void bmpDraw3(Adafruit_ILI9341 * tft, char * imagePath)
 	http.end();
 }
 
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 240
 void dldDImage2(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 	uint16_t  r;
 	uint8_t hb, lb, cv, lv1, lv2, cb1, cb2;
