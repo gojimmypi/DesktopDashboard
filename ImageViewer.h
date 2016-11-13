@@ -13,8 +13,17 @@
 
 int ah2i(uint8_t s);
 void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
+
+/// <summary>
+/// bmpDraw 
+/// </summary>
+/// <remarks>
+/// imagePath is an HTTP (not HTTPS) url that points to a BMP source image.
+/// see https://github.com/gojimmypi/imageConvert2BMP for runtime conversions
+/// </remarks>
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath);
-void bmpDrawFromUrl(Adafruit_ILI9341 * tft, char * imagePath);
+
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath);
 
 #endif
 
