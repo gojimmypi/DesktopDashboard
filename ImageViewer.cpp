@@ -242,7 +242,42 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 
 }
 
-void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath)
+int screenIsValidX(int thisX) {
+	return ( (thisX < SCREEN_WIDTH) && (thisX >= 0) ? true : false);
+}
+
+int screenIsValidY(int thisY) {
+	return ((thisY < SCREEN_HEIGHT) && (thisY >= 0) ? true : false);
+}
+
+int screenSafeX(int thisX, int startX) {
+	int resultX = thisX + startX;
+	if (screenIsValidX(resultX)) {
+		return resultX;
+	}
+	else if (resultX < 0) {
+		return 0;
+	}
+	else if (resultX > SCREEN_WIDTH) {
+		return SCREEN_WIDTH;
+	}
+}
+
+int screenSafeY(int thisY, int startY) {
+	int resultY = thisY + startY;
+	if (screenIsValidY(resultY)) {
+		return resultY;
+	}
+	else if (resultY < 0) {
+		return 0;
+	}
+	else if (resultY > SCREEN_WIDTH) {
+		return SCREEN_WIDTH;
+	}
+}
+
+
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX, int startY)
 {
 	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed
 	uint32_t time = millis();
@@ -387,7 +422,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath)
 					//}
 					for (int j = 0; j < biWidth; j++)
 					{
-						tft->drawPixel(j, i, pImageBMP[bfOffBits + biWidth * i + j]);
+						tft->drawPixel(screenSafeX(i, startX), screenSafeY(j, startY), pImageBMP[bfOffBits + biWidth * i + j]);
 					}
 				}
 			} // end of 8 - bit
@@ -423,7 +458,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath)
 								break;
 							}
 						}
-						tft->drawPixel(i, j, tft->color565(r, g, b));
+						tft->drawPixel(screenSafeX(i, startX), screenSafeY(j, startY), tft->color565(r, g, b));
 					}
 				}
 			} // 24 bit
@@ -481,7 +516,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath)
 							//Serial.println();
 
 						}
-						tft->drawPixel(i, j, tft->color565(r, g, b));
+						tft->drawPixel(screenSafeX(i, startX), screenSafeY(j, startY), tft->color565(r, g, b));
 					}
 					// Serial.println("Current index: ");
 					// Serial.println(len - count);

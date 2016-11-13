@@ -37,6 +37,9 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h" // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"  // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
+
+// include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
+
 #include "FreeSansBold24pt7b.h" // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 //// For the Adafruit shield, these are the default.
@@ -53,6 +56,7 @@
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+//PDQ_ILI9341 tft2;
 
 // If using the breakout, change pins as desired
 //Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
@@ -110,6 +114,7 @@ void setup() {
 	Serial.println("ILI9341 Test!");
 
 	tft.begin();
+	//tft2.TFTinit();
 
 	delay(20);
 	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
@@ -151,9 +156,27 @@ void setup() {
 	//bmpDraw(&tft, "http://http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
 	//delay(2000);
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
 	delay(2000);
 	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=buspirate.png&newImageSizeX=320");
+	delay(2000);
+	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa1.jpg&newImageSizeX=320");
+	delay(2000);
+	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa2.jpg&newImageSizeX=320");
+	delay(2000);
+	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa3.png&newImageSizeX=320");
+	delay(2000);
+	screenClear();
+
+
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
 	delay(2000);
