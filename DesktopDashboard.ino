@@ -11,24 +11,23 @@
 // if Arduino environment properly installed, simply vMicro-Build to automaticlly resolve references (no need to manually vMicro-Add Library...)
 //
 // Default vMicro project location is C:\Users\<username>\Documents\Arduino\<ProjectName>
+//
+// Target display is like the Adafruit ILI9341 http://www.adafruit.com/products/1651
+//
+//***************************************************
 
-/***************************************************
-This is our GFX example for the Adafruit ILI9341 Breakout and Shield
-----> http://www.adafruit.com/products/1651
 
-Check out the links above for our tutorials and wiring diagrams
-These displays use SPI to communicate, 4 or 5 pins are required to
-interface (RST is optional)
-Adafruit invests time and resources providing this open source code,
-please support Adafruit and open-source hardware by purchasing
-products from Adafruit!
+// My config is stored in myPrivateSettings.h file 
+#include "/workspace/myPrivateSettings.h"; 
 
-Written by Limor Fried/Ladyada for Adafruit Industries.
-MIT license, all text above must be included in any redistribution
-****************************************************/
+// create your own myPrivateSettings.h, or uncomment the following lines:
+// const char* WIFI_SSID = "my-wifi-SSID";
+// const char* WIFI_PWD = "my-WiFi-PASSWORD";
+
 
 
 // include "ili9341test.h"
+
 #include "settings.h"
 #include "debughandler.h"
 #include <ESP8266HTTPClient.h>
@@ -43,7 +42,8 @@ MIT license, all text above must be included in any redistribution
 //// For the Adafruit shield, these are the default.
 //#define TFT_DC 9
 //#define TFT_CS 10
-// For the esp shield, these are the default.
+//
+// For the esp shield, these are the default:
 #define TFT_DC 2
 #define TFT_CS 15
 
@@ -96,9 +96,13 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 
 
-const char* ssid = "mySSID"; 
-const char* password = "myPassword";
-
+void screenClear() {
+	tft.fillScreen(ILI9341_BLACK);
+	tft.setRotation(2);
+	tft.drawRect(0, 0, 240, 320, 0x00FF);
+	yield();
+	Serial.println("Screen clear\n\r\n\r");
+}
 
 
 void setup() {
@@ -110,18 +114,23 @@ void setup() {
 	delay(20);
 	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
 	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
+
 	delay(20);
 	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
 	delay(20);
-	tft.fillScreen(ILI9341_BLACK);
-	delay(20);
-	tft.setRotation(2);
-	tft.drawRect(0, 0, 240, 320, 0x00FF);
-	delay(20);
+
+	screenClear();
+	//tft.fillScreen(ILI9341_BLACK);
+	//delay(20);
+	//tft.setRotation(2);
+	//tft.drawRect(0, 0, 240, 320, 0x00FF);
+	//delay(20);
 
 
 	WiFi.mode(WIFI_STA);
-	WiFi.begin(ssid, password);
+	WiFi.begin(WIFI_SSID, WIFI_PWD);
+	Serial.print("Connecting to ");
+	Serial.print(WIFI_SSID);
 	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
 		tft.setTextColor(ILI9341_BLUE);
 		tft.setCursor(15, 195);
@@ -136,21 +145,59 @@ void setup() {
 	Serial.println(WiFi.localIP());
 
 	tft.setCursor(0, 0);
-	// http://healthagency.slocounty.ca.gov/macVPN/24bit.bmp
-	bmpDraw(&tft, "http://gojimmypi-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
+	// 
+
+
+	//bmpDraw(&tft, "http://http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
+	//delay(2000);
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
 	delay(2000);
+	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
+	delay(2000);
+	screenClear();
+
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=55");
+	delay(2000);
+	screenClear();
+
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=60");
+	delay(2000);
+	screenClear();
+
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=70");
+	delay(2000);
+	screenClear();
+
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=80");
+	delay(2000);
+	screenClear();
+
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=90");
+	delay(2000);
+	screenClear();
+
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
+	delay(2000);
+	screenClear();
 
 	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/256color.bmp");
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/256color.bmp");
 	delay(2000);
+	screenClear();
 
 	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/16color.bmp");
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/16color.bmp");
 	delay(2000);
+	screenClear();
 
 	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://healthagency.slocounty.ca.gov/macVPN/mono.bmp");
+	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/mono.bmp");
 	delay(2000);
+	screenClear();
+
 	// Hello World!
 	
 	tft.setCursor(0, 0);
