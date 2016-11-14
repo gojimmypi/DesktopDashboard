@@ -12,12 +12,14 @@
 #include "Adafruit_ILI9341.h"
 
 const int ESP_MIN_HEAP = 2048;
-#define SCREEN_WIDTH 320
-#define SCREEN_HEIGHT 240
+
+// note the "width" is the short dimension, like on a phone. We use the display rotated 90 degrees
+#define SCREEN_WIDTH 240
+#define SCREEN_HEIGHT 320
 
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert - http://jeplans.com/default.php?targp=ESP2Electronics2
-// (although I was never able to get that PHP conversion to work, so I wrote my own in ASP.Net)
+//  (although I was never able to get that PHP conversion to work, so I wrote my own in ASP.Net)
 // see https://github.com/gojimmypi/imageConvert2BMP
 
 // Other resources that I found helpful:
@@ -188,6 +190,13 @@ int currentStreamPosition = 0;
 int currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
 int totalBytesRead = 0;
 
+
+// ***************************************************************************************************************************************************************
+//  byteInStream - forward-reading only; get byte at [position] in a stream of web data. if it is not currently loaded into memory,
+//                 discard prior chunk of data and read the next one until found. (works best when incrementing by 1 only!)
+//
+// TODO - add maximum amount of time to read before giving up
+// ***************************************************************************************************************************************************************
 uint8_t byteInStream(WiFiClient * stream, int position) {
 	int thisPayloadBytesAvailable = 0;
 	int thisPayloadByteCount = 0;
@@ -231,6 +240,10 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 		//Serial.println(" millis to read.");
 
 	}
+	else {
+		// TODO - allow bi-directional reading? we'd likely need to start all over at the beginning. probably not the most efficient...
+	}
+
 	int thisPayloadPosition = position - currentStreamPosition + 1;
 	if (thisPayloadPosition >= 0) {
 		return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
@@ -242,14 +255,23 @@ uint8_t byteInStream(WiFiClient * stream, int position) {
 
 }
 
+// ***************************************************************************************************************************************************************
+//  screenIsValidX - is a given X-ccordinate between 0 and [SCREEN_WIDTH - 1] ?
+// ***************************************************************************************************************************************************************
 int screenIsValidX(int thisX) {
 	return ( (thisX < SCREEN_WIDTH) && (thisX >= 0) ? true : false);
 }
 
+// ***************************************************************************************************************************************************************
+//  screenIsValidY - is a given Y-ccordinate between 0 and [SCREEN_HEIGHT - 1] ?
+// ***************************************************************************************************************************************************************
 int screenIsValidY(int thisY) {
 	return ((thisY < SCREEN_HEIGHT) && (thisY >= 0) ? true : false);
 }
 
+// ***************************************************************************************************************************************************************
+//  screenSafeX: ensure requested X-coordinate lands on screen, based on a resepctive starting offset value
+// ***************************************************************************************************************************************************************
 int screenSafeX(int thisX, int startX) {
 	int resultX = thisX + startX;
 	if (screenIsValidX(resultX)) {
@@ -261,8 +283,14 @@ int screenSafeX(int thisX, int startX) {
 	else if (resultX > SCREEN_WIDTH) {
 		return SCREEN_WIDTH;
 	}
+	else {
+		return 0; // we'll likely never end up here. this is just to appease compiler warning. wanted screenIsValidY listed firsdt for performance
+	}
 }
 
+// ***************************************************************************************************************************************************************
+//  screenSafeY: ensure requested Y-coordinate lands on screen, based on a resepctive starting offset value
+// ***************************************************************************************************************************************************************
 int screenSafeY(int thisY, int startY) {
 	int resultY = thisY + startY;
 	if (screenIsValidY(resultY)) {
@@ -271,28 +299,38 @@ int screenSafeY(int thisY, int startY) {
 	else if (resultY < 0) {
 		return 0;
 	}
-	else if (resultY > SCREEN_WIDTH) {
-		return SCREEN_WIDTH;
+	else if (resultY > SCREEN_HEIGHT) {
+		return SCREEN_HEIGHT;
+	}
+	else {
+		return 0; // we'll likely never end up here. this is just to appease compiler warning. wanted screenIsValidY listed firsdt for performance
 	}
 }
 
 
-void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX, int startY)
+// ***************************************************************************************************************************************************************
+// ***************************************************************************************************************************************************************
+//   bmpDrawFromUrlStream - get a BMP image at web location imageUrl, and draw it at an offset from (0,0) at (startX, startY)
+//                          as many images will be bigger than all of available ESP8266 memory, we are rendering image as
+//                          data is being read from the stream.
+// ***************************************************************************************************************************************************************
+// ***************************************************************************************************************************************************************
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, int startY)
 {
-	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed
-	uint32_t time = millis();
+	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed;this pointer to BMP image byte array contains only part of an image at any given time 
+	uint32_t time = millis(); // we'll keep track of how long it takes to render
 
-	Serial.print("Starting bmpDrawFromUrl 1.02: ");
-	Serial.print(imagePath);
+	Serial.print("Starting bmpDrawFromUrl 1.03: ");
+	Serial.print(imageUrl);
 	Serial.print("  -  ");
 
-	currentStreamPosition = 0;
-	currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
-	totalBytesRead = 0;
-	len = 1;
+	currentStreamPosition = 0; // new images always start at byte position 0
+	currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"; this is the relative position in that payload
+	totalBytesRead = 0; // how many bytes of total image size have been read ant any given time.
+	len = 1; // total length of image data, including all expected chunks of data in all payloads read
 
 	HTTPClient http;
-	http.begin(imagePath);
+	http.begin(imageUrl);
 
 	int httpCode = http.GET();
 	//if (!http.connected()) {
@@ -303,18 +341,18 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX, 
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			Serial.printf("Initial heap size: %u\n", ESP.getFreeHeap());
 
 			unsigned long DrawTime = millis();
-			// get lenght of document (is -1 when Server sends no Content-Length header)
-			 len = http.getSize();
+			// get length of document (is -1 when Server sends no Content-Length header)
+			len = http.getSize(); // TODO - this is no longer needed locally
 			unsigned char tmp;
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 			WiFiClient * stream = http.getStreamPtr();
 			
-			unsigned char testChar = byteInStream(stream, 1); // test only TODO remove
+			unsigned char testChar = byteInStream(stream, 1); // read the first chunk of data. TODO ensure we read at least 54 bytes of header.
 
 			Serial.print("Step 1 ");
 			Serial.println(testChar);
@@ -440,7 +478,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX, 
 				{
 					count += extra;
 					yield();
-					uint8_t r; uint8_t g; uint8_t b;
+					uint8_t r = 0; uint8_t g = 0; uint8_t b = 0;
 
 					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
 					for (int j = biWidth - 1; j >= 0; j--)
@@ -484,7 +522,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX, 
 				{
 					//count += extra; // we don't need to pad to 4 byte boundries, as 32 bits is already 4 bytes!  (note difference from 24 bit rendering)
 					yield(); // give the OS a bit of time after showing each row.
-					uint8_t r; uint8_t g; uint8_t b; uint8_t a;
+					uint8_t r = 0; uint8_t g = 0; uint8_t b = 0; uint8_t a = 0;
 
 					for (int j = 0; j < biWidth; j++)
 					{
@@ -764,7 +802,7 @@ void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath)
 				{
 					//count += extra;
 					yield();
-					uint8_t r; uint8_t g; uint8_t b; uint8_t a;
+					uint8_t r = 0; uint8_t g = 0; uint8_t b = 0; uint8_t a = 0;
 
 					//for (int j = 0; j <= biWidth - 1; j++) // renders reverse image
 					for (int j = biWidth - 1; j >= 0; j--)

@@ -16,6 +16,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DesktopDashboard.ino" />
+    <None Include="doc\adafruit-gfx-graphics-library.pdf" />
+    <None Include="doc\ILI9341.pdf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.DesktopDashboard.vsarduino.h">

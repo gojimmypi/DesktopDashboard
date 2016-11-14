@@ -15,7 +15,7 @@ int ah2i(uint8_t s);
 void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
 
 /// <summary>
-/// bmpDraw 
+/// Display the BMP image at imageUrl on the tft ILI9341 
 /// </summary>
 /// <remarks>
 /// imagePath is an HTTP (not HTTPS) url that points to a BMP source image.
@@ -23,7 +23,7 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
 /// </remarks>
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath);
 
-void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imagePath, int startX = 0, int startY = 0);
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX = 0, int startY = 0);
 
 #endif
 
