@@ -18,18 +18,24 @@
 
 
 // My config is stored in myPrivateSettings.h file 
-#include "/workspace/myPrivateSettings.h"; 
+// if you choose not to use such a file, set this to false:
+#define USE_myPrivateSettings true
 
-// create your own myPrivateSettings.h, or uncomment the following lines:
-// const char* WIFI_SSID = "my-wifi-SSID";
-// const char* WIFI_PWD = "my-WiFi-PASSWORD";
+// Note the two possible file name string formats.
+#if USE_myPrivateSettings == true
+#    include "/workspace/myPrivateSettings.h"; 
+#else
+  // create your own myPrivateSettings.h, or uncomment the following lines:
+  const char* WIFI_SSID = "my-wifi-SSID";
+  const char* WIFI_PWD = "my-WiFi-PASSWORD";
+#endif
 
 
 
 // include "ili9341test.h"
 
-#include "settings.h"
-#include "debughandler.h"
+// include "settings.h"
+// include "debughandler.h"
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include "ImageViewer.h"
@@ -237,72 +243,8 @@ void setup() {
 	Serial.print("Image Format: 0x"); Serial.println(x, HEX); // Success = 0x0
 	x = tft.readcommand8(ILI9341_RDSELFDIAG);
 	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
-//
-	//Serial.println(F("Benchmark                Time (microseconds)"));
-	//delay(10);
-	//Serial.print(F("Screen fill              "));
-	//Serial.println(testFillScreen());
-	//delay(500);
-
-	//Serial.print(F("Text                     "));
-	//Serial.println(testText());
-	//delay(3000);
-
-	//Serial.print(F("Lines                    "));
-	//Serial.println(testLines(ILI9341_CYAN));
-	//delay(500);
-
-	//Serial.print(F("Horiz/Vert Lines         "));
-	//Serial.println(testFastLines(ILI9341_RED, ILI9341_BLUE));
-	//delay(500);
-
-	//Serial.print(F("Rectangles (outline)     "));
-	//Serial.println(testRects(ILI9341_GREEN));
-	//delay(500);
-
-	//Serial.print(F("Rectangles (filled)      "));
-	//Serial.println(testFilledRects(ILI9341_YELLOW, ILI9341_MAGENTA));
-	//delay(500);
-
-	//Serial.print(F("Circles (filled)         "));
-	//Serial.println(testFilledCircles(10, ILI9341_MAGENTA));
-
-	//Serial.print(F("Circles (outline)        "));
-	//Serial.println(testCircles(10, ILI9341_WHITE));
-	//delay(500);
-
-	//Serial.print(F("Triangles (outline)      "));
-	//Serial.println(testTriangles());
-	//delay(500);
-
-	//Serial.print(F("Triangles (filled)       "));
-	//Serial.println(testFilledTriangles());
-	//delay(500);
-
-	//Serial.print(F("Rounded rects (outline)  "));
-	//Serial.println(testRoundRects());
-	//delay(500);
-
-	//Serial.print(F("Rounded rects (filled)   "));
-	//Serial.println(testFilledRoundRects());
-	//delay(500);
 
 	Serial.println(F("Done!"));
-
-}
-
-
-void loop(void) {
-	tft.setRotation(3);
-
-	testText();
-	delay(2000);
-}
-
-
-void screenDashboard() {
-	tft.fillScreen(ILI9341_BLACK);
-	tft.setCursor(0, 0);
 
 }
 
@@ -313,6 +255,19 @@ unsigned long testText() {
 	tft.setCursor(0, 36);
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
 	tft.println("Hello World!");
+	//tft.setTextSize(5);
+	tft.println("");
+	//tft.setTextSize(2);
+	return micros() - start;
+}
+
+unsigned long testText2() {
+	tft.fillScreen(ILI9341_BLACK);
+	unsigned long start = micros();
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+	tft.setCursor(0, 36);
+	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+	tft.println("Staff");
 	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
 	tft.println("Productivity:");
 	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
@@ -323,3 +278,43 @@ unsigned long testText() {
 	//tft.setTextSize(2);
 	return micros() - start;
 }
+
+unsigned long testText3() {
+	tft.fillScreen(ILI9341_BLACK);
+	unsigned long start = micros();
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+	tft.setCursor(0, 36);
+	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+	tft.println(" Budget YTD");
+	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
+	tft.println("   Spent:");
+	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
+	tft.println("  $36,123");
+	tft.setTextColor(ILI9341_GREEN);
+	//tft.setTextSize(5);
+	tft.println("");
+	//tft.setTextSize(2);
+	return micros() - start;
+}
+
+
+void loop(void) {
+	tft.setRotation(3);
+
+	testText();
+	delay(2000);
+
+	testText2();
+	delay(2000);
+
+	testText3();
+	delay(2000);
+}
+
+
+void screenDashboard() {
+	tft.fillScreen(ILI9341_BLACK);
+	tft.setCursor(0, 0);
+
+}
+
