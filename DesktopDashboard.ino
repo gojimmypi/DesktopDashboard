@@ -22,12 +22,12 @@
 #define USE_myPrivateSettings true
 
 // Note the two possible file name string formats.
-#if USE_myPrivateSettings == true
-#    include "/workspace/myPrivateSettings.h"; 
+#if USE_myPrivateSettings == true 
+#  include "/workspace/myPrivateSettings.h"; 
 #else
   // create your own myPrivateSettings.h, or uncomment the following lines:
-  const char* WIFI_SSID = "my-wifi-SSID";
-  const char* WIFI_PWD = "my-WiFi-PASSWORD";
+const char* WIFI_SSID = "my-wifi-SSID";
+const char* WIFI_PWD = "my-WiFi-PASSWORD";
 #endif
 
 
@@ -159,8 +159,10 @@ void setup() {
 	// 
 
 
-	//bmpDraw(&tft, "http://http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
+	//bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
 	//delay(2000);
+
+
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
 	delay(2000);

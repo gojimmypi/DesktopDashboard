@@ -48,5 +48,11 @@
     <Image Include="doc\Adafruit1601-to-ESP8266-Pinout.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="doc\Adafruit1601-to-ESP8266-Pinout-transposed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="doc\ILI9341-34pin.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
