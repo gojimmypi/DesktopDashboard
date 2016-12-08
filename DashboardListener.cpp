@@ -10,18 +10,18 @@
 
 String currentKey;
 int thisDashboardID;
-struct DashboardItem {
-	int dashboard_id;
-	String validation_key;
-	String dashboard_short_summary;
-	String dashboard_long_summary;
-};
+//struct DashboardItem {
+//	int dashboard_id;
+//	String validation_key;
+//	String dashboard_short_summary;
+//	String dashboard_long_summary;
+//};
 
-std::vector<DashboardItem> DashboardItems;
+// std::vector<DashboardItem> DashboardItems;
 bool valueIs_dashboard_id;
 
+
 void DashboardListener::whitespace(char c) {
-	DashboardItems.pop_back();
 	Serial.println("whitespace");
 }
 
@@ -41,7 +41,7 @@ void DashboardListener::key(String key) {
 void DashboardListener::value(String value) {
 	Serial.println("value: " + value);
 	if (valueIs_dashboard_id) {
-		thisDashboardID = value.toInt;
+		thisDashboardID = value.toInt();
 	}
 }
 

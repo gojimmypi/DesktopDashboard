@@ -591,10 +591,15 @@ int confirmedInternetConnectivity(const char* host) {
 		//	  Serial.print(queryStringValue(ResponseLocation, "ap_mac"));
 
 		doAcceptTermsAndConditions();
+		connectionStatus = htmlSend(host, 80, htmlString);
+		if (connectionStatus != 0) {
+			Serial.println("Error: Unable to accept terms and conditions!");
+			return 1;
+		}
 	}
 	else {
 		Serial.println("Error connecting.");
 		return 1;
 	}
-
+	return 0;
 };

@@ -14,57 +14,58 @@
 #include <JsonListener.h>
 #include <JsonStreamingParser.h>
 
+
+
+#include <vector>
 class DashboardClient : public JsonListener {
 private:
 	String currentKey;
+	int thisDashboardID;
+	bool foundNewObject = false; // when we find a new ID, the very next field *MUST* be its value (ID must be first item in JSON)
+
+
+	struct DashboardItem {
+		int itemID = 0;
+		int dashboard_id = 0;
+		String validation_key = "";
+		String dashboard_short_summary = "";
+		String dashboard_long_summary = "";
+		String current_value = "";
+		String target_value = "";
+		String units = "";
+		DashboardItem* next = NULL; // we have a linked list of dashboard items
+	};
+	int itemCount = 0;
+	DashboardItem* headItem = new DashboardItem; // for a great tutorial on linked lists, see https://www.youtube.com/watch?v=o5wJkJJpKtM
+	DashboardItem* thisItem = headItem;
+	DashboardItem* nextItem = headItem;
 
 public:
 	DashboardClient();
 
-	void DashboardClient::whitespace(char c) {
-		Serial.println("whitespace");
-	}
+	virtual void open(); 
 
-	void DashboardClient::startDocument() {
-		Serial.println("start document");
-	}
+	virtual bool available();
 
-	void DashboardClient::key(String key) {
-		currentKey = String(key);
-		valueIs_dashboard_id = false;
-		if (key == "dashboard_id") {
-			valueIs_dashboard_id = true;
-		}
-		Serial.println("key: " + key);
-	}
+	virtual String read();
 
-	void DashboardClient::value(String value) {
-		Serial.println("value: " + value);
-		if (valueIs_dashboard_id) {
-			thisDashboardID = value.toInt;
-		}
-	}
+	virtual void whitespace(char c);
 
-	void DashboardClient::endArray() {
-		Serial.println("end array. ");
-	}
+	virtual void startDocument();
 
-	void DashboardClient::endObject() {
-		Serial.println("end object. ");
-	}
+	virtual void key(String key);
 
-	void DashboardClient::endDocument() {
-		Serial.println("end document. ");
-	}
+	virtual void value(String value);
 
-	void DashboardClient::startArray() {
-		Serial.println("start array. ");
-	}
+	virtual void endArray();
 
-	void DashboardClient::startObject() {
-		Serial.println("start object. ");
-	}
+	virtual void endObject();
 
+	virtual void endDocument();
+
+	virtual void startArray();
+
+	virtual void startObject();
 };
 #endif
 
