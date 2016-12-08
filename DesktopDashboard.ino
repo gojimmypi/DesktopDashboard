@@ -19,17 +19,27 @@
 
 // My config is stored in myPrivateSettings.h file 
 // if you choose not to use such a file, set this to false:
+#include "DashboardClient.h"
 #define USE_myPrivateSettings true
 
 // Note the two possible file name string formats.
 #if USE_myPrivateSettings == true 
-#  include "/workspace/myPrivateSettings.h"; 
+#  include "/workspace/myPrivateSettings.h"
 #else
   // create your own myPrivateSettings.h, or uncomment the following lines:
-const char* WIFI_SSID = "my-wifi-SSID";
-const char* WIFI_PWD = "my-WiFi-PASSWORD";
+const char* WIFI_SSID = "my-wifi-SSID"
+const char* WIFI_PWD = "my-WiFi-PASSWORD"
+const char* DASHBOARD_URL = "/mylink/myfile.json"
+const char* DASHBOARD_HOST = "mydashboardhost.com"
 #endif
 
+
+//#include <vector>
+//int test()
+//{
+//	std::vector<char> fcharacters;
+//
+//}
 
 
 // include "ili9341test.h"
@@ -39,14 +49,22 @@ const char* WIFI_PWD = "my-WiFi-PASSWORD";
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
 #include "ImageViewer.h"
-#include "wifiConnectHelper.h"
+// include "wifiConnectHelper.h" // no longer used, see htmlHelper
 #include "SPI.h"
-#include "Adafruit_GFX.h" // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
-#include "Adafruit_ILI9341.h"  // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
+#include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
+#include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
+
+
+#include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
+#include "JsonListener.h"
+
+#include "htmlHelper.h"          // htmlHelper files copied to this project from https://github.com/gojimmypi/VisitorWiFi-ESP8266
+
+//include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 
 // include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
 
-#include "FreeSansBold24pt7b.h" // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
+#include "FreeSansBold24pt7b.h"  // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 //// For the Adafruit shield, these are the default.
 //#define TFT_DC 9
@@ -104,6 +122,7 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 //           + 3        1	   2   +5         +5 Vin
 
 
+DashboardClient listener;
 
 
 void screenClear() {
@@ -115,9 +134,87 @@ void screenClear() {
 }
 
 
+void UpdateDashboard() {
+	JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
+	parser.setListener(&listener); // init our JSON listener
+	Serial.print("Heap=");
+	Serial.println(ESP.getFreeHeap());
+
+	WiFiClient client;
+	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_URL + " HTTP/1.1\r\n" +
+		"Host: " + DASHBOARD_HOST + "\r\n" +
+		"Connection: close\r\n\r\n";
+	//Serial.println(httpPayload);
+
+	const int httpPort = 80;
+	if (!client.connect(DASHBOARD_HOST, httpPort)) {
+		Serial.println("connection failed");
+	}
+
+	client.print(httpPayload);
+
+	int retryCounter = 0;
+	while (!client.available()) {
+		delay(1000);
+		retryCounter++;
+		if (retryCounter > 10) {
+			Serial.println("Abort!");
+			return;
+		}
+	}
+
+	boolean isBody = false;
+	char c;
+
+	int size = 0;
+	client.setNoDelay(false);
+	while (client.connected()) {
+		while ((size = client.available()) > 0) {
+			c = client.read();
+			if (c == '{' || c == '[') {
+				isBody = true;
+			}
+			if (isBody) {
+				parser.parse(c);
+				yield();
+			}
+		}
+	}
+	Serial.println("Done!");
+	client.stopAll();
+	parser.setListener(NULL);
+
+
+	tft.fillScreen(ILI9341_BLACK);
+	unsigned long start = micros();
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+
+
+	listener.open();
+	while (listener.available()) {
+		yield();
+		tft.setCursor(0, 36);
+		tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+		tft.println(listener.read());
+		tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
+		tft.println(listener.read());
+		tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
+		tft.println(listener.read());
+	}
+}
+
 void setup() {
 	Serial.begin(115200);
 	Serial.println("ILI9341 Test!");
+
+
+
+	//char json[] = "{\"a\":3, \"b\":{\"c\":\"d\"}}";
+	//for (int i = 0; i < sizeof(json); i++) {
+	//	parser.parse(json[i]);
+	//}
+
+
 
 	tft.begin();
 	//tft2.TFTinit();
@@ -154,6 +251,14 @@ void setup() {
 	Serial.println("WiFi connected");
 	Serial.println("");
 	Serial.println(WiFi.localIP());
+
+
+	tft.setRotation(3);
+	for (int i = 0; i < 5; i++) {
+		UpdateDashboard();
+		Serial.println("\r\n");
+		delay(2000);
+	}
 
 	tft.setCursor(0, 0);
 	// 

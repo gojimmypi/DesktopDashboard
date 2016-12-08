@@ -26,21 +26,33 @@
     <ClInclude Include="FreeSansBold24pt7b.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wifiConnectHelper.h">
+    <ClInclude Include="ImageViewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImageViewer.h">
+    <ClInclude Include="htmlHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DashboardListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DashboardClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="wifiConnectHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ImageViewer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FreeSansBold24pt7b.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="htmlHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DashboardListener.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DashboardClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

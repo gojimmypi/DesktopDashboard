@@ -978,8 +978,7 @@ void dldDImage2(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc) {
 
 	// configure server and url
 	//char * imagePath = "http://beanstalk.azurewebsites.net/helloworld.png";
-	//char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bin";
-	char * imagePath = "http://healthagency.slocounty.ca.gov/macVPN/newimage.bmp";
+	char * imagePath = "http://beanstalk.azurewebsites.net/newimage.bmp";
 	http.begin(imagePath);
 	Serial.print("[HTTP] GET...\n");
 	Serial.print(imagePath);
