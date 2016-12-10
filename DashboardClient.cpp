@@ -8,18 +8,33 @@ DashboardClient::DashboardClient() {
 
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::open() {
 	// this is a common syntax, to "open" something for reading
 	thisItem = headItem; // set our linked list item to the first (header) item
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 bool DashboardClient::available() {
 	return !(thisItem == NULL) ; // the default "next item" is NULL, so when thisItem == NULL, we no longer have data "available" to read
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 int readCounter = 0;
 String  DashboardClient::read() {
-	String result;
+	return read(-1);
+}
+
+String  DashboardClient::read(int displayLine) {
+	String result = "";
+	if (thisItem == NULL) { return result; } // return blank if there's no item
+
 	switch (readCounter)
 	{
 	case 0:
@@ -41,12 +56,18 @@ String  DashboardClient::read() {
 	return result;
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::whitespace(char c) {
 	 
 	//Serial.print(thisDashboardID);
 	//Serial.println(" whitespace");
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::startDocument() {
 	itemCount = 0;       // at the beginning, we have no items (other than our header)
 	thisItem = headItem; // set out linked list to the first (header) item
@@ -54,6 +75,9 @@ void DashboardClient::startDocument() {
 	//	Serial.println(" start document");
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::key(String key) {
 #include <vector>
 	currentKey = String(key);
@@ -68,6 +92,9 @@ void DashboardClient::key(String key) {
 	//Serial.println(" key: " + key);
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::value(String value) {
 //	Serial.println("value: " + value);
 	if (currentKey == "dashboard_id") {
@@ -97,11 +124,17 @@ void DashboardClient::value(String value) {
 	
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::endArray() {
 	//Serial.print(thisDashboardID);
 	//Serial.println(" end array. ");
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::endObject() {
 	foundNewObject = false;
 	thisItem = thisItem->next; // or thisItem = NextItem
@@ -110,6 +143,9 @@ void DashboardClient::endObject() {
 	//Serial.println(" end object. ");
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::endDocument() {
 	thisItem = headItem;
 
@@ -125,11 +161,17 @@ void DashboardClient::endDocument() {
 	//}
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::startArray() {
 	//Serial.print(thisDashboardID);
 	//Serial.println(" start array. ");
 }
 
+//**************************************************************************************************************
+// 
+//**************************************************************************************************************
 void DashboardClient::startObject() {
 	foundNewObject = true;
 	//Serial.print(thisDashboardID);

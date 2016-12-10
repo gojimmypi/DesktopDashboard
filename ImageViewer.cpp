@@ -13,8 +13,10 @@
 
 const int ESP_MIN_HEAP = 2048;
 
-// note the "width" is the short dimension, like on a phone. We use the display rotated 90 degrees
-#define SCREEN_WIDTH 240
+// note the default "width" is the short dimension, like on a phone. We use the display rotated 90 degrees
+// but width and height are determined AFTER screen rotation is set!
+// note we usually display pictures with setRotation(2); (long side down)
+#define SCREEN_WIDTH 240 
 #define SCREEN_HEIGHT 320
 
 //
