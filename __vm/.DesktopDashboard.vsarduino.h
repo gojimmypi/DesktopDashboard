@@ -91,10 +91,14 @@ extern "C" void __cxa_pure_virtual() {;}
 #define noInterrupts() cli()
 
 #include <DesktopDashboard.ino>
+#include <DashboardClient.cpp>
+#include <DashboardClient.h>
+#include <DashboardListener.cpp>
+#include <DashboardListener.h>
 #include <FreeSansBold24pt7b.cpp>
 #include <FreeSansBold24pt7b.h>
 #include <ImageViewer.cpp>
 #include <ImageViewer.h>
-#include <wifiConnectHelper.cpp>
-#include <wifiConnectHelper.h>
+#include <htmlHelper.cpp>
+#include <htmlHelper.h>
 #endif
