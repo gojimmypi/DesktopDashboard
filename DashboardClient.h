@@ -47,7 +47,8 @@ public:
 
 	virtual bool available();
 
-	virtual String read();
+	virtual String read(); // when less then zero, read sequantially, pointing to next DashboardItem at position 2
+	virtual String read(int displayLine); // when less then zero, read sequantially, pointing to next DashboardItem at position 2
 
 	virtual void whitespace(char c);
 

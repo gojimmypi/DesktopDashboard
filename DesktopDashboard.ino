@@ -126,15 +126,25 @@ DashboardClient listener;
 
 
 void screenClear() {
+	tft.setCursor(0, 0);
 	tft.fillScreen(ILI9341_BLACK);
-	tft.setRotation(2);
-	tft.drawRect(0, 0, 240, 320, 0x00FF);
+	//tft.drawRect(0, 0, 240, 320, 0x00FF);
+	tft.drawRect(0, 0, 320, 240, 0x00FF);
 	yield();
-	Serial.println("Screen clear\n\r\n\r");
+	// Serial.println("Screen clear\n\r\n\r");
 }
 
 
+void fetchDashboardData() {
+
+}
+
 void UpdateDashboard() {
+	screenClear();
+	tft.setCursor(0, 36);
+	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+	tft.println("Refreshing...");
+
 	JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
 	parser.setListener(&listener); // init our JSON listener
 	Serial.print("Heap=");
@@ -193,6 +203,7 @@ void UpdateDashboard() {
 	listener.open();
 	while (listener.available()) {
 		yield();
+		screenClear();
 		tft.setCursor(0, 36);
 		tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
 		tft.println(listener.read());
@@ -200,7 +211,17 @@ void UpdateDashboard() {
 		tft.println(listener.read());
 		tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
 		tft.println(listener.read());
+		delay(2000);
 	}
+}
+
+void screenMessage(String message, String messageLine2 = "", String messageLine3 = "") {
+	screenClear();
+	tft.setCursor(0, 36);
+	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+	tft.println(message);
+	tft.println(messageLine2);
+	tft.println(messageLine3);
 }
 
 void setup() {
@@ -217,8 +238,6 @@ void setup() {
 
 
 	tft.begin();
-	//tft2.TFTinit();
-
 	delay(20);
 	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
 	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
@@ -227,8 +246,12 @@ void setup() {
 	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
 	delay(20);
 
-	screenClear();
-	//tft.fillScreen(ILI9341_BLACK);
+	tft.setRotation(3);
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+
+	screenMessage("Startup...");
+
+
 	//delay(20);
 	//tft.setRotation(2);
 	//tft.drawRect(0, 0, 240, 320, 0x00FF);
@@ -248,19 +271,26 @@ void setup() {
 		Serial.print(".");
 		delay(250);
 	}
+	screenMessage("Connected to", WIFI_SSID);
 	Serial.println("WiFi connected");
 	Serial.println("");
 	Serial.println(WiFi.localIP());
 
 
-	tft.setRotation(3);
-	for (int i = 0; i < 5; i++) {
-		UpdateDashboard();
-		Serial.println("\r\n");
-		delay(2000);
+	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
+		Serial.println("Successfully connected!");
 	}
 
-	tft.setCursor(0, 0);
+	String htmlString = String("GET http://") + String(DASHBOARD_HOST) + "/" + " HTTP/1.1\r\n" +
+		"Host: " + String(DASHBOARD_HOST) + "\r\n" +
+		"Content-Encoding: identity" + "\r\n" +
+		"Connection: Keep-Alive\r\n\r\n";
+
+	htmlSend(DASHBOARD_HOST, 80, htmlString);
+
+
+
+
 	// 
 
 
@@ -268,7 +298,8 @@ void setup() {
 	//delay(2000);
 
 
-
+	tft.setRotation(2);
+	tft.setCursor(0, 0);
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
 	delay(2000);
 	screenClear();
@@ -355,73 +386,67 @@ void setup() {
 
 }
 
-unsigned long testText() {
-	tft.fillScreen(ILI9341_BLACK);
-	unsigned long start = micros();
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println("Hello World!");
-	//tft.setTextSize(5);
-	tft.println("");
-	//tft.setTextSize(2);
-	return micros() - start;
-}
-
-unsigned long testText2() {
-	tft.fillScreen(ILI9341_BLACK);
-	unsigned long start = micros();
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println("Staff");
-	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
-	tft.println("Productivity:");
-	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
-	tft.println("  35%");
-	tft.setTextColor(ILI9341_GREEN);
-	//tft.setTextSize(5);
-	tft.println("");
-	//tft.setTextSize(2);
-	return micros() - start;
-}
-
-unsigned long testText3() {
-	tft.fillScreen(ILI9341_BLACK);
-	unsigned long start = micros();
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println(" Budget YTD");
-	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
-	tft.println("   Spent:");
-	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
-	tft.println("  $36,123");
-	tft.setTextColor(ILI9341_GREEN);
-	//tft.setTextSize(5);
-	tft.println("");
-	//tft.setTextSize(2);
-	return micros() - start;
-}
+//unsigned long testText() {
+//	tft.fillScreen(ILI9341_BLACK);
+//	unsigned long start = micros();
+//	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+//	tft.setCursor(0, 36);
+//	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+//	tft.println("Hello World!");
+//	//tft.setTextSize(5);
+//	tft.println("");
+//	//tft.setTextSize(2);
+//	return micros() - start;
+//}
+//
+//unsigned long testText2() {
+//	tft.fillScreen(ILI9341_BLACK);
+//	unsigned long start = micros();
+//	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+//	tft.setCursor(0, 36);
+//	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+//	tft.println("Staff");
+//	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
+//	tft.println("Productivity:");
+//	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
+//	tft.println("  35%");
+//	tft.setTextColor(ILI9341_GREEN);
+//	//tft.setTextSize(5);
+//	tft.println("");
+//	//tft.setTextSize(2);
+//	return micros() - start;
+//}
+//
+//unsigned long testText3() {
+//	tft.fillScreen(ILI9341_BLACK);
+//	unsigned long start = micros();
+//	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+//	tft.setCursor(0, 36);
+//	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+//	tft.println(" Budget YTD");
+//	tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
+//	tft.println("   Spent:");
+//	tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
+//	tft.println("  $36,123");
+//	tft.setTextColor(ILI9341_GREEN);
+//	//tft.setTextSize(5);
+//	tft.println("");
+//	//tft.setTextSize(2);
+//	return micros() - start;
+//}
 
 
 void loop(void) {
-	tft.setRotation(3);
 
-	testText();
-	delay(2000);
+	// visitor WiFi access may timeout at some point, so we many need to re-accept the Terms and Conditions.
+	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
+		Serial.println("Successfully connected!");
+	}
 
-	testText2();
-	delay(2000);
-
-	testText3();
-	delay(2000);
+	tft.setRotation(3); // 3 = connector to right, long side down
+	Serial.println("Updating... \r\n");
+	UpdateDashboard();
 }
 
 
-void screenDashboard() {
-	tft.fillScreen(ILI9341_BLACK);
-	tft.setCursor(0, 0);
-
-}
 
