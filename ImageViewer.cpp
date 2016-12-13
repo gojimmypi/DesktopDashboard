@@ -13,12 +13,6 @@
 
 const int ESP_MIN_HEAP = 2048;
 
-// note the default "width" is the short dimension, like on a phone. We use the display rotated 90 degrees
-// but width and height are determined AFTER screen rotation is set!
-// note we usually display pictures with setRotation(2); (long side down)
-#define SCREEN_WIDTH 240 
-#define SCREEN_HEIGHT 320
-
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert - http://jeplans.com/default.php?targp=ESP2Electronics2
 //  (although I was never able to get that PHP conversion to work, so I wrote my own in ASP.Net)
@@ -403,7 +397,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, i
 			Serial.print("biSizeImage = ");
 			Serial.println(biSizeImage);
 
-			int size = 3 * biWidth * biHeight;
+			// int size = 3 * biWidth * biHeight;
 
 			int maxWait = 100;
 			int thisWait = 0;

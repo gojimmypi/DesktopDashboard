@@ -11,6 +11,13 @@
 
 #include "Adafruit_ILI9341.h"  // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
 
+// note the default "width" is the short dimension, like on a phone. We use the display rotated 90 degrees
+// but width and height are determined AFTER screen rotation is set!
+// note we usually display pictures with setRotation(2); (long side down)
+#define SCREEN_WIDTH 240 
+#define SCREEN_HEIGHT 320
+
+
 int ah2i(uint8_t s);
 void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
 
