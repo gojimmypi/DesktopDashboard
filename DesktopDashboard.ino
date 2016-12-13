@@ -128,8 +128,8 @@ DashboardClient listener;
 void screenClear() {
 	tft.setCursor(0, 0);
 	tft.fillScreen(ILI9341_BLACK);
-	//tft.drawRect(0, 0, 240, 320, 0x00FF);
-	tft.drawRect(0, 0, 320, 240, 0x00FF);
+	// tft.drawRect(0, 0, 240, 320, 0x00FF);
+	// tft.drawRect(0, 0, 320, 240, 0x00FF);
 	yield();
 	// Serial.println("Screen clear\n\r\n\r");
 }
@@ -139,7 +139,41 @@ void fetchDashboardData() {
 
 }
 
+void tftPrintlnCentered(String text) { 
+	char  textArray[60];
+	int16_t x1, y1;
+
+	typedef signed short int16_t; // apparently we need to manually define this to appease tft.getTextBounds
+	uint16_t w;
+	uint16_t h;
+	
+
+	// getTextBounds expects an array of chars, but we are using strings, so convert
+	text.toCharArray(textArray, 60);
+
+	Serial.print("textItemArray= ");
+	Serial.println(textArray);
+
+	//  getTextBounds(char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
+	tft.getTextBounds(textArray, 0, 36, &x1, &y1, &w, &h);
+	Serial.printf("Text Bounds: x1=%3d y1=%3d w=%3d h=%3d\r\n", x1, y1, w, h);
+
+	int newX, newY;
+	newX = tft.getCursorX() + ((SCREEN_HEIGHT - w) / 2); // note we are using SCREEN_HEIGHT for x-direction since screen is rotated!
+	if (newX < 0) { newX = 0; }
+	newY = tft.getCursorY(); // + ((SCREEN_WIDTH - h - y1) / 2);
+	
+	Serial.printf("newX = %3d newY=%3d", newX, newY);
+	tft.setCursor(newX, newY);
+	tft.println(text);
+	// delete[] textArray; // cleanup
+	Serial.println(ESP.getFreeHeap());
+}
+
 void UpdateDashboard() {
+	tft.setRotation(3);
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+
 	screenClear();
 	tft.setCursor(0, 36);
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
@@ -201,21 +235,50 @@ void UpdateDashboard() {
 
 
 	listener.open();
+	
 	while (listener.available()) {
 		yield();
 		screenClear();
+		String textItem;
+
 		tft.setCursor(0, 36);
+
+		textItem = listener.read();
 		tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-		tft.println(listener.read());
+		tftPrintlnCentered(textItem);//		tft.println(textItem);
+
+		textItem = listener.read();
 		tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
-		tft.println(listener.read());
+		tftPrintlnCentered(textItem);//		tft.println(textItem);
+
+		//tft.println(listener.read());
+
+		textItem = listener.read();
 		tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
-		tft.println(listener.read());
+		tftPrintlnCentered(textItem);//		tft.println(textItem);
+		//tft.println(listener.read());
 		delay(2000);
 	}
 }
 
+void showDasbboardImages() {
+//	Server_Payroll_Hours.png
+//	Server_Payroll_Hours.bmp
+	screenClear();
+	tft.setFont(); // reset to default small font when drawing images so that any long error message is readable.
+	tft.setRotation(2);
+
+	tft.setCursor(1, 1);
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 50, 50);
+	delay(5000);
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 50, 50);
+	delay(5000);
+	// bmpDrawFromUrlStream(&tft, "http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp", 50, 50);
+	// delay(2000);
+}
+
 void screenMessage(String message, String messageLine2 = "", String messageLine3 = "") {
+	tft.setRotation(3);
 	screenClear();
 	tft.setCursor(0, 36);
 	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
@@ -238,6 +301,8 @@ void setup() {
 
 
 	tft.begin();
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+
 	delay(20);
 	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
 	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
@@ -246,8 +311,6 @@ void setup() {
 	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
 	delay(20);
 
-	tft.setRotation(3);
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
 
 	screenMessage("Startup...");
 
@@ -298,6 +361,28 @@ void setup() {
 	//delay(2000);
 
 
+
+	// Hello World!
+	
+	tft.setCursor(0, 0);
+
+	// read diagnostics (optional but can help debug problems)
+	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+	Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX); // success =  0x9C
+	x = tft.readcommand8(ILI9341_RDMADCTL);
+	Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX); // Sucess =  0x48
+	x = tft.readcommand8(ILI9341_RDPIXFMT);
+	Serial.print("Pixel Format: 0x"); Serial.println(x, HEX); // Success =  0x5
+	x = tft.readcommand8(ILI9341_RDIMGFMT);
+	Serial.print("Image Format: 0x"); Serial.println(x, HEX); // Success = 0x0
+	x = tft.readcommand8(ILI9341_RDSELFDIAG);
+	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
+
+	Serial.println(F("Done!"));
+
+}
+
+void imageTest() {
 	tft.setRotation(2);
 	tft.setCursor(0, 0);
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
@@ -365,25 +450,6 @@ void setup() {
 	delay(2000);
 	screenClear();
 
-	// Hello World!
-	
-	tft.setCursor(0, 0);
-	//dldDImage(&tft, 0, 0);
-
-	// read diagnostics (optional but can help debug problems)
-	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-	Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX); // success =  0x9C
-	x = tft.readcommand8(ILI9341_RDMADCTL);
-	Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX); // Sucess =  0x48
-	x = tft.readcommand8(ILI9341_RDPIXFMT);
-	Serial.print("Pixel Format: 0x"); Serial.println(x, HEX); // Success =  0x5
-	x = tft.readcommand8(ILI9341_RDIMGFMT);
-	Serial.print("Image Format: 0x"); Serial.println(x, HEX); // Success = 0x0
-	x = tft.readcommand8(ILI9341_RDSELFDIAG);
-	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
-
-	Serial.println(F("Done!"));
-
 }
 
 //unsigned long testText() {
@@ -443,8 +509,10 @@ void loop(void) {
 		Serial.println("Successfully connected!");
 	}
 
+	// Server_Payroll_Hours.png
 	tft.setRotation(3); // 3 = connector to right, long side down
 	Serial.println("Updating... \r\n");
+	showDasbboardImages();
 	UpdateDashboard();
 }
 
