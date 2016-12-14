@@ -42,7 +42,7 @@ String  DashboardClient::read(int displayLine) {
 		readCounter++;
 		break;
 	case 1:
-		result = thisItem->current_value;
+		result = thisItem->current_value_display;
 		readCounter++;
 		break;
 	case 2:
@@ -114,6 +114,9 @@ void DashboardClient::value(String value) {
 	}
 	if (currentKey == "dashboard_short_summary") {
 		thisItem->dashboard_short_summary = value;
+	}
+	if (currentKey == "current_value_display") {
+		thisItem->current_value_display = value;
 	}
 	if (currentKey == "current_value") {
 		thisItem->current_value = value;

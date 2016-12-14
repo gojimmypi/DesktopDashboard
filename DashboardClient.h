@@ -32,6 +32,7 @@ private:
 		String dashboard_long_summary = "";
 		String current_value = "";
 		String target_value = "";
+		String current_value_display = "";
 		String units = "";
 		DashboardItem* next = NULL; // we have a linked list of dashboard items
 	};

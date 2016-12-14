@@ -269,9 +269,9 @@ void showDasbboardImages() {
 	tft.setRotation(2);
 
 	tft.setCursor(1, 1);
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 50, 50);
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 0, 0);
 	delay(5000);
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 50, 50);
+	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 0, 0);
 	delay(5000);
 	// bmpDrawFromUrlStream(&tft, "http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp", 50, 50);
 	// delay(2000);
