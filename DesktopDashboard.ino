@@ -141,33 +141,34 @@ void fetchDashboardData() {
 
 void tftPrintlnCentered(String text) { 
 	char  textArray[60];
-	int16_t x1, y1;
+	int16_t x1, y1; // return position parameters of the TextBounds
 
 	typedef signed short int16_t; // apparently we need to manually define this to appease tft.getTextBounds
-	uint16_t w;
-	uint16_t h;
+	uint16_t w; // return width value of TextBounds
+	uint16_t h; // return height value of TextBounds
 	
 
 	// getTextBounds expects an array of chars, but we are using strings, so convert
 	text.toCharArray(textArray, 60);
 
-	Serial.print("textItemArray= ");
-	Serial.println(textArray);
+	//Serial.print("textItemArray= ");
+	//Serial.println(textArray);
 
 	//  getTextBounds(char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
 	tft.getTextBounds(textArray, 0, 36, &x1, &y1, &w, &h);
-	Serial.printf("Text Bounds: x1=%3d y1=%3d w=%3d h=%3d\r\n", x1, y1, w, h);
+	// Serial.printf("Text Bounds: x1=%3d y1=%3d w=%3d h=%3d\r\n", x1, y1, w, h);
 
 	int newX, newY;
 	newX = tft.getCursorX() + ((SCREEN_HEIGHT - w) / 2); // note we are using SCREEN_HEIGHT for x-direction since screen is rotated!
 	if (newX < 0) { newX = 0; }
-	newY = tft.getCursorY(); // + ((SCREEN_WIDTH - h - y1) / 2);
+	newY = tft.getCursorY();  // y position does not change for horizontal centering  // + ((SCREEN_WIDTH - h)  / 2);
 	
-	Serial.printf("newX = %3d newY=%3d", newX, newY);
+	//Serial.printf("newX = %3d newY=%3d", newX, newY);
+	//Serial.println();
 	tft.setCursor(newX, newY);
 	tft.println(text);
-	// delete[] textArray; // cleanup
-	Serial.println(ESP.getFreeHeap());
+	//Serial.print("Heap=");
+	//Serial.println(ESP.getFreeHeap());
 }
 
 void UpdateDashboard() {
