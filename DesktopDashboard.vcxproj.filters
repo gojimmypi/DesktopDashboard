@@ -16,10 +16,55 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DesktopDashboard.ino" />
+    <None Include="doc\adafruit-gfx-graphics-library.pdf" />
+    <None Include="doc\ILI9341.pdf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.DesktopDashboard.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FreeSansBold24pt7b.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageViewer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="htmlHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DashboardListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DashboardClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ImageViewer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FreeSansBold24pt7b.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="htmlHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DashboardListener.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DashboardClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="doc\Adafruit1601-to-ESP8266-Pinout.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="doc\Adafruit1601-to-ESP8266-Pinout-transposed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="doc\ILI9341-34pin.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
