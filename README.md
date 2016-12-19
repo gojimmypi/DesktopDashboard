@@ -16,6 +16,12 @@ The one issue with the ESP8266 - is that with the low price tag, it has limited 
 
 https://github.com/gojimmypi/imageConvert2BMP
 
+This version incorprates my "Visitor WiFi" library, that programmatically presses the "I accept the terms and conditions" button on a redirect page, before actually granting access to the internet:
+
+https://github.com/gojimmypi/VisitorWiFi-ESP8266
+
+Included in that library are a variety of useful functions for getting HTML tag values, parsing headers, reading query strings, and more.
+
 Note that if you download the entire project and compile this with Visual Micro add-in for Visual Studio, you'll likely need to edit the DesktopDashboard.vcxproj file, replacing all the instances of C:\Users\gojimmypi... with C:\Users\YourLoginName  (does anyone know of a more graceful way to share Visual Studio projects on github?). Hopefully your Arduino libs are also installed by default at a location like:
 
 C:\Users\YourLoginName\AppData\Local\arduino15\packages\esp8266\
