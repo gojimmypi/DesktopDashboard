@@ -11,7 +11,11 @@
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
 
-const int ESP_MIN_HEAP = 2048;
+#define IMAGEDEBUG true // define image debug to send processing data to serial port
+#define IMAGEDEBUG1 true // define even more image debug to send processing data to serial port
+#define IMAGEDEBUG2 true // define maximum image debug to send processing data to serial port
+
+const int ESP_MIN_HEAP = 2048; // if the free heap space every falls below this number, abort.
 
 //
 // code based on ESP8266 WiFi Image Viewer by James Eckert - http://jeplans.com/default.php?targp=ESP2Electronics2
@@ -101,13 +105,13 @@ unsigned char* bmpRawReader(WiFiClient * f) {
 
 	f->readBytes(data, size);
 
-	for (int i = 0; i < size; i += 3)
-	{
-		unsigned char tmp = data[i];
-		data[i] = data[i + 2];
-		data[i + 2] = tmp;
-	}
-	return data;
+for (int i = 0; i < size; i += 3)
+{
+	unsigned char tmp = data[i];
+	data[i] = data[i + 2];
+	data[i + 2] = tmp;
+}
+return data;
 }
 
 boolean bmpReadHeader(WiFiClient * f)
@@ -180,11 +184,12 @@ boolean bmpReadHeader(WiFiClient * f)
 
 
 
-int len = 1;
+int len = 1; // we'll determine to total length of the image byte stream
 unsigned char* pImageBMP;
 int currentStreamPosition = 0;
 int currentStreamPayloadPosition = 0;  // there are often chunks of data returned in separate "payloads"
 int totalBytesRead = 0;
+bool abortMidStream = false;
 
 
 // ***************************************************************************************************************************************************************
@@ -196,58 +201,114 @@ int totalBytesRead = 0;
 uint8_t byteInStream(WiFiClient * stream, int position) {
 	int thisPayloadBytesAvailable = 0;
 	int thisPayloadByteCount = 0;
+	int thisAttemptCount = 0;
 	boolean foundPayload = false;
+	abortMidStream = false; // if we lose our connection mid-stream, we may need to abort
 
 	if (position > totalBytesRead) {
+		// we only ever do anything here if the requested position in stream is greater than the total bytes we've read
+
 		int startMillis = millis();
+
+#ifdef IMAGEDEBUG
+		Serial.print("byteInStream - reading next segment position ");
+		Serial.print(position);
+		Serial.print(" at time: "); 
+		Serial.print(startMillis);
+		Serial.print("; len =");
+		Serial.println(len);
+		yield();
+#endif
+
 		while ((totalBytesRead < len) && (!foundPayload)) {
 			thisPayloadBytesAvailable = stream->available();
 			if ((totalBytesRead < len) && (thisPayloadBytesAvailable == 0)) {
 				yield();
 				thisPayloadBytesAvailable = stream->available();
 			}
+
 			if (thisPayloadBytesAvailable > 0) {
 				if (thisPayloadBytesAvailable < ESP.getFreeHeap() - ESP_MIN_HEAP) {
 					delete pImageBMP; // without deleting old data, we run out of heap space!
 					pImageBMP = new unsigned char[thisPayloadBytesAvailable]; // allocation of just enough memory for this incremenal payload of data
 				}
 				else {
+					abortMidStream = true;
 					Serial.println("Out of heap space while rendering!");
-					return (uint8_t) 0;
+					break; // abort while loop when out of space
 				}
 				//Serial.print("Reading.... ");
 				yield();
 				
 				//thisPayloadByteCount = stream->read(data + totalBytesRead, thisPayloadBytesAvailable); // the old code appended to one big data array
 
-				thisPayloadByteCount = stream->read(pImageBMP, thisPayloadBytesAvailable);
-				currentStreamPosition = totalBytesRead + 1; // the prior [total bytes read] + 1 is the new stream position
-				totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
-				//Serial.print(thisPayloadByteCount);
-				//Serial.println(" bytes. Done.");
-				//Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
-				//Serial.print("  total read = ");
-				//Serial.println(totalBytesRead);
-				foundPayload = true; // once we find and read the next payload, we exit the while loop 
+				if (stream->connected()) {
+					thisPayloadByteCount = stream->read(pImageBMP, thisPayloadBytesAvailable);
+					currentStreamPosition = totalBytesRead + 1; // the prior [total bytes read] + 1 is the new stream position
+					totalBytesRead += thisPayloadByteCount; // this is the ending position of the stream payload we now have
+															//Serial.print(thisPayloadByteCount);
+															//Serial.println(" bytes. Done.");
+															//Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+															//Serial.print("  total read = ");
+															//Serial.println(totalBytesRead);
+					foundPayload = true; // once we find and read the next payload, we exit the while loop 
+				}
+				else {
+					Serial.println("Error: byteInStream called with disconnected stream!");
+					yield();
+					abortMidStream = true;
+					break; // abort while loop when not connected
+				}
+			}
+			else {
+				yield();
+				delay(1);
+				thisAttemptCount++;
+				if (thisAttemptCount > 1000) {
+					abortMidStream = true;
+#ifdef IMAGEDEBUG
+					Serial.println("No payload available for more than 1000 attempts for stream.available!");
+#endif
+					break; // give up trying to read
+				}
 			}
 		}
 		//typically less than 1 milis to read
-		//Serial.print(millis() - startMillis);
-		//Serial.println(" millis to read.");
+
+#ifdef IMAGEDEBUG
+		Serial.print("done reading. ");
+		Serial.print(millis() - startMillis);
+		Serial.print(" millis to read. Available wait loops: ");
+		Serial.println(thisAttemptCount);
+#endif
 
 	}
 	else {
 		// TODO - allow bi-directional reading? we'd likely need to start all over at the beginning. probably not the most efficient...
 	}
 
-	int thisPayloadPosition = position - currentStreamPosition + 1;
-	if (thisPayloadPosition >= 0) {
-		return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
+
+	if (abortMidStream) {
+#ifdef  IMAGEDEBUG 
+		Serial.println("Error: byteInStream aborted mid-stream, returning NAN!");
+#endif //  IMAGEDEBUG 
+
+		return NAN; // we have no data
 	}
-	else {
-		return (uint8_t) 0;
-		Serial.println("Error: requested position not currently in memory (currently supporting forward-reading only)");
-	}
+	else
+	{
+		int thisPayloadPosition = position - currentStreamPosition + 1;
+		if (thisPayloadPosition >= 0) {
+			return pImageBMP[position - currentStreamPosition + 1]; // TODO, reference position in payload only, not full stream
+		}
+		else {
+			return (uint8_t)0;
+#ifdef IMAGEDEBUG
+			Serial.println("Error: requested position not currently in memory (currently supporting forward-reading only)");
+#endif
+		} // else requested position is not in memory, not already processed, and stream cannot be reversed
+	} // else not aborting mid-stream
+
 
 }
 
@@ -269,6 +330,8 @@ int screenIsValidY(int thisY) {
 //  screenSafeX: ensure requested X-coordinate lands on screen, based on a resepctive starting offset value
 // ***************************************************************************************************************************************************************
 int screenSafeX(int thisX, int startX) {
+	if (isnan(thisX) || isnan(startX)) return 0;
+
 	int resultX = thisX + startX;
 	if (screenIsValidX(resultX)) {
 		return resultX;
@@ -280,7 +343,7 @@ int screenSafeX(int thisX, int startX) {
 		return SCREEN_WIDTH;
 	}
 	else {
-		return 0; // we'll likely never end up here. this is just to appease compiler warning. wanted screenIsValidY listed firsdt for performance
+		return 0; // we'll likely never end up here. this is just to appease compiler warning. wanted screenIsValidY listed first for performance
 	}
 }
 
@@ -288,6 +351,8 @@ int screenSafeX(int thisX, int startX) {
 //  screenSafeY: ensure requested Y-coordinate lands on screen, based on a resepctive starting offset value
 // ***************************************************************************************************************************************************************
 int screenSafeY(int thisY, int startY) {
+	if (isnan(thisY) || isnan(startY)) return 0;
+
 	int resultY = thisY + startY;
 	if (screenIsValidY(resultY)) {
 		return resultY;
@@ -485,15 +550,17 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, i
 								b = byteInStream(stream, count++); // r = data[len - ++count];
 								break;
 							case 1:
-								g = pImageBMP[len - ++count];
+								g = byteInStream(stream, count++); //  pImageBMP[len - ++count];
 								break;
 							case 2:
 								r = byteInStream(stream, count++); // b = data[len - ++count];
 								break;
 							}
 						}
+						if (abortMidStream) { break; }
 						tft->drawPixel(screenSafeX(i, startX), screenSafeY(j, startY), tft->color565(r, g, b));
 					}
+					if (abortMidStream) { break; }
 				}
 			} // 24 bit
 
@@ -513,15 +580,19 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, i
 				//	}
 				//	Serial.println();
 				//}
-				//for (int i = biHeight - 1; i >= 0; i--) // rows of data make up height
+				//
+				
+				// scan rows of data, starting at bottom of the image, working our way up 
 				for (int i = 0; i < biHeight; i++) // [biHeight] rows of data make up height of our image
 				{
 					//count += extra; // we don't need to pad to 4 byte boundries, as 32 bits is already 4 bytes!  (note difference from 24 bit rendering)
 					yield(); // give the OS a bit of time after showing each row.
 					uint8_t r = 0; uint8_t g = 0; uint8_t b = 0; uint8_t a = 0;
 
+					// a loop to fetch a row of data from our picture
 					for (int j = 0; j < biWidth; j++)
 					{
+						// a small loop to read 4 bytes in the stream; one pixel-worth of data to display
 						for (int k = 0; k < 4; k++) { // there are 4 bytes per pixel: BGRA
 							switch (k) {
 							case 3:
@@ -537,7 +608,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, i
 								b = byteInStream(stream, count++); // blue
 								break;
 							}
-							// show the pixel datan (this can REALLY slow down a rendering, particularly for full screen)
+							// show the pixel data (this can REALLY slow down a rendering, particularly for full screen)
 							//Serial.print(count);
 							//Serial.print(" : ");
 							//Serial.print(r, HEX);
@@ -550,10 +621,13 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, i
 							//Serial.println();
 
 						}
+						if (abortMidStream) { break; }
+						// draw a single pixel of data from our byte stream
 						tft->drawPixel(screenSafeX(i, startX), screenSafeY(j, startY), tft->color565(r, g, b));
 					}
 					// Serial.println("Current index: ");
 					// Serial.println(len - count);
+					if (abortMidStream) { break; }
 				}
 			} // 32 bit
 
