@@ -16,6 +16,10 @@
 //
 //***************************************************
 
+#define SCREEN_DEBUG // when defined, display screen debug info 
+#define JSON_DEBUG // when defined, display screen debug info 
+#define WIFI_DEBUG // when defined, display screen debug info 
+#define SERIAL_SCREEN_DEBUG // when defined, will print all scren messages also to Serial
 
 // My config is stored in myPrivateSettings.h file 
 // if you choose not to use such a file, set this to false:
@@ -24,13 +28,13 @@
 
 // Note the two possible file name string formats.
 #if USE_myPrivateSettings == true 
-#  include "/workspace/myPrivateSettings.h"
+#include "/workspace-git/myPrivateSettings.h"
 #else
-  // create your own myPrivateSettings.h, or uncomment the following lines:
-const char* WIFI_SSID = "my-wifi-SSID"
-const char* WIFI_PWD = "my-WiFi-PASSWORD"
-const char* DASHBOARD_URL = "/mylink/myfile.json"
-const char* DASHBOARD_HOST = "mydashboardhost.com"
+// create your own myPrivateSettings.h, or uncomment the following lines:
+//const char* WIFI_SSID = "my-wifi-SSID"
+//const char* WIFI_PWD = "my-WiFi-PASSWORD"
+//const char* DASHBOARD_URL = "/mylink/myfile.json"
+//const char* DASHBOARD_HOST = "mydashboardhost.com"
 #endif
 
 
@@ -131,7 +135,9 @@ void screenClear() {
 	// tft.drawRect(0, 0, 240, 320, 0x00FF);
 	// tft.drawRect(0, 0, 320, 240, 0x00FF);
 	yield();
-	// Serial.println("Screen clear\n\r\n\r");
+#ifdef SERIAL_SCREEN_DEBUG
+	Serial.println("Screen clear\n\r");
+#endif
 }
 
 
@@ -167,6 +173,10 @@ void tftPrintlnCentered(String text) {
 	//Serial.println();
 	tft.setCursor(newX, newY);
 	tft.println(text);
+#ifdef SERIAL_SCREEN_DEBUG
+	Serial.print("Centered text:");
+	Serial.println(text);
+#endif
 	//Serial.print("Heap=");
 	//Serial.println(ESP.getFreeHeap());
 }
@@ -225,9 +235,9 @@ void UpdateDashboard() {
 			}
 		}
 	}
-	Serial.println("Done!");
-	client.stopAll();
-	parser.setListener(NULL);
+	Serial.println("Done parsing data!");
+	client.stopAll(); // flush client
+	parser.setListener(NULL); // cleanup the parser
 
 
 	tft.fillScreen(ILI9341_BLACK);
@@ -252,16 +262,20 @@ void UpdateDashboard() {
 		tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
 		tftPrintlnCentered(textItem);//		tft.println(textItem);
 
-		//tft.println(listener.read());
-
 		textItem = listener.read();
 		tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
 		tftPrintlnCentered(textItem);//		tft.println(textItem);
-		//tft.println(listener.read());
 		delay(2000);
 	}
 }
+void imageViewDelay() {
+	Serial.print("Waiting.");
+	delay(1000); Serial.print(".");
+	delay(1000); Serial.print(".");
+	delay(1000); Serial.print(".");
+	delay(1000); Serial.print(".");
 
+}
 void showDasbboardImages() {
 //	Server_Payroll_Hours.png
 //	Server_Payroll_Hours.bmp
@@ -271,9 +285,7 @@ void showDasbboardImages() {
 
 	tft.setCursor(1, 1);
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 0, 0);
-	delay(5000);
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 0, 0);
-	delay(5000);
+	imageViewDelay(); 
 	// bmpDrawFromUrlStream(&tft, "http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp", 50, 50);
 	// delay(2000);
 }
@@ -286,9 +298,44 @@ void screenMessage(String message, String messageLine2 = "", String messageLine3
 	tft.println(message);
 	tft.println(messageLine2);
 	tft.println(messageLine3);
+#ifdef SERIAL_SCREEN_DEBUG
+	Serial.println(message);
+	if (messageLine2 > "") { Serial.println(messageLine2); }
+	if (messageLine3 > "") { Serial.println(messageLine3); }
+#endif
+}
+
+
+int wifiConnect(int maxAttempts = 50) {
+	int countAttempt = 0;
+	WiFi.mode(WIFI_STA);
+	WiFi.begin(WIFI_SSID, WIFI_PWD);
+	Serial.print("Connecting to ");
+	Serial.print(WIFI_SSID);
+	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
+		tft.setTextColor(ILI9341_BLUE);
+		tft.setCursor(15, 195);
+		delay(250);
+		tft.setTextColor(ILI9341_RED);
+		tft.setCursor(15, 195);
+		Serial.print(".");
+		delay(250);
+		countAttempt++;
+		if (countAttempt > maxAttempts) {
+			countAttempt = 0;
+			Serial.println("WiFi Disconnect... ");
+			WiFi.disconnect();
+			delay(5000);
+			Serial.println("WiFi Retrying. ");
+			WiFi.mode(WIFI_STA);
+			WiFi.begin(WIFI_SSID, WIFI_PWD);
+		}
+	}
+
 }
 
 void setup() {
+	delay(5000);
 	Serial.begin(115200);
 	Serial.println("ILI9341 Test!");
 
@@ -321,20 +368,8 @@ void setup() {
 	//tft.drawRect(0, 0, 240, 320, 0x00FF);
 	//delay(20);
 
+	wifiConnect(50);
 
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(WIFI_SSID, WIFI_PWD);
-	Serial.print("Connecting to ");
-	Serial.print(WIFI_SSID);
-	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
-		tft.setTextColor(ILI9341_BLUE);
-		tft.setCursor(15, 195);
-		delay(250);
-		tft.setTextColor(ILI9341_RED);
-		tft.setCursor(15, 195);
-		Serial.print(".");
-		delay(250);
-	}
 	screenMessage("Connected to", WIFI_SSID);
 	Serial.println("WiFi connected");
 	Serial.println("");
@@ -379,7 +414,7 @@ void setup() {
 	x = tft.readcommand8(ILI9341_RDSELFDIAG);
 	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
 
-	Serial.println(F("Done!"));
+	Serial.println(F("Setup Done!"));
 
 }
 
