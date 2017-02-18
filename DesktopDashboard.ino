@@ -33,10 +33,17 @@
 // create your own myPrivateSettings.h, or uncomment the following lines:
 //const char* WIFI_SSID = "my-wifi-SSID"
 //const char* WIFI_PWD = "my-WiFi-PASSWORD"
-//const char* DASHBOARD_URL = "/mylink/myfile.json"
+
+//const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
+//const char* DASHBOARD_PATH = "/theDataPath/"
+//const char* DASHBOARD_APP = "/theDashboardApplicationPath/";
 //const char* DASHBOARD_HOST = "mydashboardhost.com"
+// will build:  http://mydashboardhost.com/theDashboardApplicationPath/
+//      and:    http://mydashboardhost.com/theDataPath/
 #endif
 
+const char* httpText = "http://"; // this is defined once here to allow easy transition from http:// to https://
+String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
 
 //#include <vector>
 //int test()
@@ -181,6 +188,9 @@ void tftPrintlnCentered(String text) {
 	//Serial.println(ESP.getFreeHeap());
 }
 
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
 void UpdateDashboard() {
 	tft.setRotation(3);
 	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
@@ -196,7 +206,7 @@ void UpdateDashboard() {
 	Serial.println(ESP.getFreeHeap());
 
 	WiFiClient client;
-	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_URL + " HTTP/1.1\r\n" +
+	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		"Host: " + DASHBOARD_HOST + "\r\n" +
 		"Connection: close\r\n\r\n";
 	//Serial.println(httpPayload);
@@ -268,6 +278,10 @@ void UpdateDashboard() {
 		delay(2000);
 	}
 }
+
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
 void imageViewDelay() {
 	Serial.print("Waiting.");
 	delay(1000); Serial.print(".");
@@ -276,6 +290,17 @@ void imageViewDelay() {
 	delay(1000); Serial.print(".");
 
 }
+
+//*******************************************************************************************************************************************
+// return url like  http://myDashboardHost.com/theDashboardApplicationPath/
+//*******************************************************************************************************************************************
+String baseURL() {
+	return String(httpText) + String(DASHBOARD_HOST) + String(DASHBOARD_APP);
+}
+
+//*******************************************************************************************************************************************
+// show images (setRotation = 2)
+//*******************************************************************************************************************************************
 void showDasbboardImages() {
 //	Server_Payroll_Hours.png
 //	Server_Payroll_Hours.bmp
@@ -284,12 +309,33 @@ void showDasbboardImages() {
 	tft.setRotation(2);
 
 	tft.setCursor(1, 1);
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320", 0, 0);
+	String thisImage = baseURL() + "imageConvert2BMP.aspx?targetImageName=server_payroll_hours.bmp&newImageSizeX=320";
+	String oldLink = "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320";
+
+	Serial.print("Drawing: ");
+	Serial.print(thisImage);
+	bmpDrawFromUrlStream(&tft, thisImage, 0, 0);
 	imageViewDelay(); 
-	// bmpDrawFromUrlStream(&tft, "http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp", 50, 50);
-	// delay(2000);
 }
 
+//*******************************************************************************************************************************************
+// startup image 
+//*******************************************************************************************************************************************
+void showStartupImage() {
+	// startup image
+	Serial.print("Build string...");
+
+	tft.setRotation(2);
+	String imageURL = "http://" + String(DASHBOARD_HOST) + String(DASHBOARD_APP) + "imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
+	Serial.println(imageURL);
+	bmpDrawFromUrlStream(&tft, imageURL, 0, 0);
+
+	Serial.print("Done with logo");
+}
+
+//*******************************************************************************************************************************************
+//  screenMessage   (setRotation = 3)
+//*******************************************************************************************************************************************
 void screenMessage(String message, String messageLine2 = "", String messageLine3 = "") {
 	tft.setRotation(3);
 	screenClear();
@@ -306,6 +352,9 @@ void screenMessage(String message, String messageLine2 = "", String messageLine3
 }
 
 
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
 int wifiConnect(int maxAttempts = 50) {
 	int countAttempt = 0;
 	WiFi.mode(WIFI_STA);
@@ -334,6 +383,23 @@ int wifiConnect(int maxAttempts = 50) {
 
 }
 
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
+void GetDasboardDataFile() {
+	// TODO - based on MAC address, determine data file name
+	// the files are expected to be static JSON, generated by process (we don't want to wait on generation for display!)
+	String macAddressFileID = "2134";
+	DasboardDataFile = macAddressFileID + ".json";
+	screenMessage("Using file", "ID: " + macAddressFileID);
+	delay(2000);
+
+	// TODO - if the file does not exist, then use default.
+}
+
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
 void setup() {
 	delay(5000);
 	Serial.begin(115200);
@@ -361,7 +427,11 @@ void setup() {
 
 
 	screenMessage("Startup...");
-
+	tft.setCursor(1, 1);
+	//String urlLogo = String("GET http://") + 
+	//	             String(DASHBOARD_HOST) + 
+	//	             String(DASHBOARD_APP) + 
+ //   				 "/imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
 
 	//delay(20);
 	//tft.setRotation(2);
@@ -385,10 +455,13 @@ void setup() {
 		"Content-Encoding: identity" + "\r\n" +
 		"Connection: Keep-Alive\r\n\r\n";
 
-	htmlSend(DASHBOARD_HOST, 80, htmlString);
+	htmlSend(DASHBOARD_HOST, 80, htmlString); // test to confirm internet operational
 
 
+	GetDasboardDataFile();
 
+
+	showStartupImage();
 
 	// 
 
@@ -418,6 +491,9 @@ void setup() {
 
 }
 
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
 void imageTest() {
 	tft.setRotation(2);
 	tft.setCursor(0, 0);
@@ -538,6 +614,11 @@ void imageTest() {
 //}
 
 
+//*******************************************************************************************************************************************
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
+//*******************************************************************************************************************************************
 void loop(void) {
 
 	// visitor WiFi access may timeout at some point, so we many need to re-accept the Terms and Conditions.

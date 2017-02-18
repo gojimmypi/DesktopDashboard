@@ -30,7 +30,7 @@ void dldDImage(Adafruit_ILI9341 * tft, uint16_t  xloc, uint16_t yloc);
 /// </remarks>
 void bmpDraw(Adafruit_ILI9341 * tft, char * imagePath);
 
-void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX = 0, int startY = 0);
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, String imageUrl, int startX = 0, int startY = 0);
 
 #endif
 

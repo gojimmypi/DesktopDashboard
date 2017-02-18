@@ -376,7 +376,7 @@ int screenSafeY(int thisY, int startY) {
 //                          data is being read from the stream.
 // ***************************************************************************************************************************************************************
 // ***************************************************************************************************************************************************************
-void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, char * imageUrl, int startX, int startY)
+void bmpDrawFromUrlStream(Adafruit_ILI9341 * tft, String imageUrl, int startX, int startY)
 {
 	pImageBMP = new unsigned char[len];  // we allocate / delete data as needed;this pointer to BMP image byte array contains only part of an image at any given time 
 	uint32_t time = millis(); // we'll keep track of how long it takes to render
