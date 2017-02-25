@@ -102,4 +102,6 @@ extern "C" void __cxa_pure_virtual() {;}
 #include <ImageViewer.h>
 #include <htmlHelper.cpp>
 #include <htmlHelper.h>
+#include <tftHelper.cpp>
+#include <tftHelper.h>
 #endif

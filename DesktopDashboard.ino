@@ -19,8 +19,11 @@
 #define SCREEN_DEBUG // when defined, display screen debug info 
 #define JSON_DEBUG // when defined, display screen debug info 
 #define WIFI_DEBUG // when defined, display screen debug info 
-#define SERIAL_SCREEN_DEBUG // when defined, will print all scren messages also to Serial
 
+
+//*******************************************************************************************************************************************
+// Begin user config
+//*******************************************************************************************************************************************
 // My config is stored in myPrivateSettings.h file 
 // if you choose not to use such a file, set this to false:
 #include "DashboardClient.h"
@@ -41,8 +44,11 @@
 // will build:  http://mydashboardhost.com/theDashboardApplicationPath/
 //      and:    http://mydashboardhost.com/theDataPath/
 #endif
+//*******************************************************************************************************************************************
+// End user config
+//*******************************************************************************************************************************************
 
-const char* httpText = "http://"; // this is defined once here to allow easy transition from http:// to https://
+
 String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
 
 //#include <vector>
@@ -54,151 +60,61 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 
 
 // include "ili9341test.h"
-
 // include "settings.h"
 // include "debughandler.h"
+// include "wifiConnectHelper.h" // no longer used, see htmlHelper
+// include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
+// include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
+
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
-#include "ImageViewer.h"
-// include "wifiConnectHelper.h" // no longer used, see htmlHelper
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
-
+#include "FreeSansBold24pt7b.h"  // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 #include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
 #include "JsonListener.h"
 
 #include "htmlHelper.h"          // htmlHelper files copied to this project from https://github.com/gojimmypi/VisitorWiFi-ESP8266
 
-//include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 
-// include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
-
-#include "FreeSansBold24pt7b.h"  // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
-
-//// For the Adafruit shield, these are the default.
-//#define TFT_DC 9
-//#define TFT_CS 10
+// TODO - delete display stuff once move to tftHelper
+//#define TFT_DC 2
+//#define TFT_CS 15
 //
-// For the esp shield, these are the default:
-#define TFT_DC 2
-#define TFT_CS 15
+//#define Touch_CS 4
+//#define Touch_IRQ 5
+//#define SD_CS 9
+// Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
-#define Touch_CS 4
-#define Touch_IRQ 5
-#define SD_CS 9
-
-// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
-//PDQ_ILI9341 tft2;
-
-// If using the breakout, change pins as desired
-//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
-
-// https://www.adafruit.com/product/1601
-// https://www.adafruit.com/product/2298
-
-// CONNECTOR VIEW FROM BACK
-//ESP8266     Name   Display Pins  Name     ESP8266
-//----------  -----   -----------  -------  -----------
-//D2 - GPIO4  TP CS    26     25   GND
-//D8 - GPIO15 LCD CS   24     23   SPI CLK  D5 - GPIO14
-//D4 - GPIO2  DC RS    22     21   MISO     D6 - GPIO12
-//                     20     19   MOSI     D7 - GPIO13
-//D1 - GPIO5           18     17
-//                     16     15            not used
-//                     14     13   reset
-//                     12     11            not used
-//               Rx    10      9   GND
-//               Tx     8      7  
-//                      6      5
-//               +5     4      3
-//+5 Vin/Vcc     +5     2      1   3.3V     3v3 
-
-// SOLDER PIN VIEW FROM DISPLAY SIDE 
-//ESP8266		     Display Pins		     ESP8266
-//            GND      25     26   TP CS    D2 - GPIO4
-//D5 - GPIO14 SPI CLK  23     24   LCD CS   D8 - GPIO15
-//D6 - GPIO12 MISO     21     22   DCRS     D4 - GPIO2
-//D7 - GPIO13 MOSI     19     20
-//                     17     18   TP IRQ	D1 - GPIO5
-//      not used       15     16
-//         reset       13     14
-//      not used       11     12
-//           GND        9     10   Rx
-//                      7      8   Tx
-//                      5      6              GND
-//                      3      4   +5         
-//           + 3        1	   2   +5         +5 Vin
-
+#include "ImageViewer.h"
+#include "tftHelper.h"           // tft screen printing 
 
 DashboardClient listener;
 
 
-void screenClear() {
-	tft.setCursor(0, 0);
-	tft.fillScreen(ILI9341_BLACK);
-	// tft.drawRect(0, 0, 240, 320, 0x00FF);
-	// tft.drawRect(0, 0, 320, 240, 0x00FF);
-	yield();
-#ifdef SERIAL_SCREEN_DEBUG
-	Serial.println("Screen clear\n\r");
-#endif
-}
+
 
 
 void fetchDashboardData() {
 
 }
 
-void tftPrintlnCentered(String text) { 
-	char  textArray[60];
-	int16_t x1, y1; // return position parameters of the TextBounds
-
-	typedef signed short int16_t; // apparently we need to manually define this to appease tft.getTextBounds
-	uint16_t w; // return width value of TextBounds
-	uint16_t h; // return height value of TextBounds
-	
-
-	// getTextBounds expects an array of chars, but we are using strings, so convert
-	text.toCharArray(textArray, 60);
-
-	//Serial.print("textItemArray= ");
-	//Serial.println(textArray);
-
-	//  getTextBounds(char *string, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
-	tft.getTextBounds(textArray, 0, 36, &x1, &y1, &w, &h);
-	// Serial.printf("Text Bounds: x1=%3d y1=%3d w=%3d h=%3d\r\n", x1, y1, w, h);
-
-	int newX, newY;
-	newX = tft.getCursorX() + ((SCREEN_HEIGHT - w) / 2); // note we are using SCREEN_HEIGHT for x-direction since screen is rotated!
-	if (newX < 0) { newX = 0; }
-	newY = tft.getCursorY();  // y position does not change for horizontal centering  // + ((SCREEN_WIDTH - h)  / 2);
-	
-	//Serial.printf("newX = %3d newY=%3d", newX, newY);
-	//Serial.println();
-	tft.setCursor(newX, newY);
-	tft.println(text);
-#ifdef SERIAL_SCREEN_DEBUG
-	Serial.print("Centered text:");
-	Serial.println(text);
-#endif
-	//Serial.print("Heap=");
-	//Serial.println(ESP.getFreeHeap());
-}
-
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
 void UpdateDashboard() {
-	tft.setRotation(3);
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+	tftScreenClear();
+	tftPrintlnCentered("Refreshing...");
 
-	screenClear();
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println("Refreshing...");
+	//tft.setRotation(3);
+	//tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+
+	//tftScreenClear();
+	//tft.setCursor(0, 36);
+	//tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+	//tft.println("Refreshing...");
 
 	JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
 	parser.setListener(&listener); // init our JSON listener
@@ -224,6 +140,9 @@ void UpdateDashboard() {
 		retryCounter++;
 		if (retryCounter > 10) {
 			Serial.println("Abort!");
+			tftScreenClear();
+			tftPrintlnCentered("WiFi Problem...");
+			delay(5000);
 			return;
 		}
 	}
@@ -250,6 +169,7 @@ void UpdateDashboard() {
 	parser.setListener(NULL); // cleanup the parser
 
 
+	tft.setRotation(3);
 	tft.fillScreen(ILI9341_BLACK);
 	unsigned long start = micros();
 	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
@@ -259,7 +179,7 @@ void UpdateDashboard() {
 	
 	while (listener.available()) {
 		yield();
-		screenClear();
+		tftScreenClear();
 		String textItem;
 
 		tft.setCursor(0, 36);
@@ -280,18 +200,6 @@ void UpdateDashboard() {
 }
 
 //*******************************************************************************************************************************************
-// 
-//*******************************************************************************************************************************************
-void imageViewDelay() {
-	Serial.print("Waiting.");
-	delay(1000); Serial.print(".");
-	delay(1000); Serial.print(".");
-	delay(1000); Serial.print(".");
-	delay(1000); Serial.print(".");
-
-}
-
-//*******************************************************************************************************************************************
 // return url like  http://myDashboardHost.com/theDashboardApplicationPath/
 //*******************************************************************************************************************************************
 String baseURL() {
@@ -304,7 +212,8 @@ String baseURL() {
 void showDasbboardImages() {
 //	Server_Payroll_Hours.png
 //	Server_Payroll_Hours.bmp
-	screenClear();
+	tftScreenClear();
+
 	tft.setFont(); // reset to default small font when drawing images so that any long error message is readable.
 	tft.setRotation(2);
 
@@ -333,49 +242,43 @@ void showStartupImage() {
 	Serial.print("Done with logo");
 }
 
-//*******************************************************************************************************************************************
-//  screenMessage   (setRotation = 3)
-//*******************************************************************************************************************************************
-void screenMessage(String message, String messageLine2 = "", String messageLine3 = "") {
-	tft.setRotation(3);
-	screenClear();
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println(message);
-	tft.println(messageLine2);
-	tft.println(messageLine3);
-#ifdef SERIAL_SCREEN_DEBUG
-	Serial.println(message);
-	if (messageLine2 > "") { Serial.println(messageLine2); }
-	if (messageLine3 > "") { Serial.println(messageLine3); }
-#endif
-}
 
 
 //*******************************************************************************************************************************************
+// wifiConnect 
 // 
+//   WiFi.begin with repeated attempts with TFT screen and optional serial progress indication
+//
 //*******************************************************************************************************************************************
 int wifiConnect(int maxAttempts = 50) {
 	int countAttempt = 0;
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(WIFI_SSID, WIFI_PWD);
+#ifdef WIFI_DEBUG
 	Serial.print("Connecting to ");
 	Serial.print(WIFI_SSID);
+#endif
 	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
 		tft.setTextColor(ILI9341_BLUE);
 		tft.setCursor(15, 195);
 		delay(250);
 		tft.setTextColor(ILI9341_RED);
 		tft.setCursor(15, 195);
+#ifdef WIFI_DEBUG
 		Serial.print(".");
+#endif
 		delay(250);
 		countAttempt++;
 		if (countAttempt > maxAttempts) {
 			countAttempt = 0;
+#ifdef WIFI_DEBUG
 			Serial.println("WiFi Disconnect... ");
+#endif
 			WiFi.disconnect();
 			delay(5000);
+#ifdef WIFI_DEBUG
 			Serial.println("WiFi Retrying. ");
+#endif
 			WiFi.mode(WIFI_STA);
 			WiFi.begin(WIFI_SSID, WIFI_PWD);
 		}
@@ -385,10 +288,10 @@ int wifiConnect(int maxAttempts = 50) {
 
 //*******************************************************************************************************************************************
 // 
+// TODO - based on MAC address, determine data file name
 //*******************************************************************************************************************************************
 void GetDasboardDataFile() {
-	// TODO - based on MAC address, determine data file name
-	// the files are expected to be static JSON, generated by process (we don't want to wait on generation for display!)
+	// the files are expected to be static JSON, pre-generated by process at server (we don't want to wait on generation of files for display!)
 	String macAddressFileID = "2134";
 	DasboardDataFile = macAddressFileID + ".json";
 	screenMessage("Using file", "ID: " + macAddressFileID);
@@ -441,10 +344,12 @@ void setup() {
 	wifiConnect(50);
 
 	screenMessage("Connected to", WIFI_SSID);
+
+#ifdef WIFI_DEBUG
 	Serial.println("WiFi connected");
 	Serial.println("");
 	Serial.println(WiFi.localIP());
-
+#endif
 
 	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
 		Serial.println("Successfully connected!");
@@ -474,18 +379,7 @@ void setup() {
 	// Hello World!
 	
 	tft.setCursor(0, 0);
-
-	// read diagnostics (optional but can help debug problems)
-	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-	Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX); // success =  0x9C
-	x = tft.readcommand8(ILI9341_RDMADCTL);
-	Serial.print("MADCTL Mode: 0x"); Serial.println(x, HEX); // Sucess =  0x48
-	x = tft.readcommand8(ILI9341_RDPIXFMT);
-	Serial.print("Pixel Format: 0x"); Serial.println(x, HEX); // Success =  0x5
-	x = tft.readcommand8(ILI9341_RDIMGFMT);
-	Serial.print("Image Format: 0x"); Serial.println(x, HEX); // Success = 0x0
-	x = tft.readcommand8(ILI9341_RDSELFDIAG);
-	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
+	tftScreenDiagnostics();
 
 	Serial.println(F("Setup Done!"));
 
@@ -499,68 +393,68 @@ void imageTest() {
 	tft.setCursor(0, 0);
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=buspirate.png&newImageSizeX=320");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa1.jpg&newImageSizeX=320");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa2.jpg&newImageSizeX=320");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa3.png&newImageSizeX=320");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=55");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=60");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=70");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=80");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=90");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	tft.setCursor(0, 0);
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/256color.bmp");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	tft.setCursor(0, 0);
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/16color.bmp");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 	tft.setCursor(0, 0);
 	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/mono.bmp");
 	delay(2000);
-	screenClear();
+	tftScreenClear();
 
 }
 
