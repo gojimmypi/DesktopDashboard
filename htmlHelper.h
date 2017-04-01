@@ -30,6 +30,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader);
 int doAcceptTermsAndConditions();
 
 int confirmedInternetConnectivity(const char* host);
+extern const char* httpText; // = "http://"; // this is defined once here to allow easy transition from http:// to https://
 
 #endif
 

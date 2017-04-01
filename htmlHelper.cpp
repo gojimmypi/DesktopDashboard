@@ -44,7 +44,7 @@ int MAX_WEB_RESPONSE = (ESP.getFreeHeap() > 10000 ? ESP.getFreeHeap() - 10000 : 
 const char* accessHost = "1.1.1.1"; // 1.1.1.1 is typically the address of a Cisco WiFi guest Access Point. TODO extract from http response
 const char* wifiUserAgent = "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko";
 const char* internetHostCheck = "gojimmypi-dev-imageconvert2bmp.azurewebsites.net"; // some well known, reliable internet url (ideally small html payload)
-
+const char* httpText = "http://";
 
 bool isOutOfMemory;
 String htmlString;

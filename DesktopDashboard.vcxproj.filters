@@ -38,6 +38,9 @@
     <ClInclude Include="DashboardClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="tftHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImageViewer.cpp">
@@ -53,6 +56,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DashboardClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tftHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
