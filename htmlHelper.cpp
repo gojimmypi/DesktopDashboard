@@ -1,5 +1,5 @@
 #include "htmlHelper.h"
-
+#include "ESP8266HTTPClient.h"
 // htmlHelper - library of utility functions to aid in parsing headers, query strings, etc.
 // 
 // most of the helpers can be re-used, however they were created primarily for the programmatic acceptance of terms and conditions
@@ -58,22 +58,9 @@ const String CrLf = "\n\r";
 
 const int MAX_CONNECTION_TIMEOUT_MILLISECONDS = 8000;
 
-class htmlHelper {
-	WiFiClient* myClient;
-	const char* thisHost; 
-	int thisPort; 
-	String sendHeader;
-
-public:
-	htmlHelper(WiFiClient*, const char*, int, String);
-	htmlHelper(WiFiClient*, const char*, int);
-	int Send();
-};
-
-
 
 int htmlHelper::Send() {
-	htmlSend(thisHost, thisPort, sendHeader); //const char* thisHost, int thisPort, String sendHeader
+	return htmlSend(thisHost, thisPort, sendHeader); //const char* thisHost, int thisPort, String sendHeader
 }
 
 // basic helper
@@ -87,6 +74,27 @@ htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port) {
 htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port, String Header) {
 	htmlHelper(thisClient, Host, Port);
 	sendHeader = Header;
+}
+htmlHelper::htmlHelper() {
+	// un-initialized htmlHelper declaration
+}
+
+bool htmlExists(String targetURL) {
+	HTTPClient http;
+	http.begin(targetURL);
+
+	int httpCode = http.GET();
+	//if (!http.connected()) {
+	//	Serial.println("HTTPClient not connected. Aborting bmpDrawFromUrl");
+	//	return;
+	//}
+	if (httpCode > 0) {
+		// HTTP header has been send and Server response header has been handled
+		// file found at server
+		return true;
+	}
+//	http.end;
+	return false;
 }
 
 String htmlBasicHeaderText(String verb, const char* targetHost, String targetUrl) {

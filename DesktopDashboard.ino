@@ -16,17 +16,16 @@
 //
 //***************************************************
 
-#define SCREEN_DEBUG // when defined, display screen debug info 
-#define JSON_DEBUG // when defined, display screen debug info 
-#define WIFI_DEBUG // when defined, display screen debug info 
-
+#define SCREEN_DEBUG // when defined, display low level screen debug info 
+#define JSON_DEBUG // when defined, display JSON debug info 
+#define WIFI_DEBUG // when defined, display WiFi debug info 
+#define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
 
 //*******************************************************************************************************************************************
 // Begin user config
 //*******************************************************************************************************************************************
 // My config is stored in myPrivateSettings.h file 
 // if you choose not to use such a file, set this to false:
-#include "DashboardClient.h"
 #define USE_myPrivateSettings true
 
 // Note the two possible file name string formats.
@@ -38,18 +37,25 @@
 //const char* WIFI_PWD = "my-WiFi-PASSWORD"
 
 //const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
-//const char* DASHBOARD_PATH = "/theDataPath/"
-//const char* DASHBOARD_APP = "/theDashboardApplicationPath/";
-//const char* DASHBOARD_HOST = "mydashboardhost.com"
+//const char* DASHBOARD_PATH = "/theDataPath/";
+//const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
+//const char* DASHBOARD_HOST = "mydashboardhost.com";
+//const char* DASHBOARD_KEY  = "XYZZY";
 // will build:  http://mydashboardhost.com/theDashboardApplicationPath/
 //      and:    http://mydashboardhost.com/theDataPath/
+// 
+// we will fetch data from a JSON file called http://mydashboardhost.com/theDataPath/XYZZYMMAABBCCDDEEFF
+// where MMAABBCCDDEEFF is this device's HEX MAC Address, with no spaces, dashes, or commas
 #endif
 //*******************************************************************************************************************************************
 // End user config
 //*******************************************************************************************************************************************
-
+#include "DashboardClient.h"
+#include "htmlHelper.h"
 
 String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
+String myMacAddress = "";
+htmlHelper myHtmlHelper;
 
 //#include <vector>
 //int test()
@@ -97,7 +103,48 @@ DashboardClient listener;
 
 
 
-void fetchDashboardData() {
+void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
+	boolean isBody = false;
+	char c;
+	String msg = "";
+	int size = 0;
+	client->setNoDelay(false);
+#ifdef JSON_DEBUG
+	int sizePreview = 120; // number of chars of JSON preview, as we don't usually need to see the whole file
+	Serial.print("Showing first ");
+	Serial.println(sizePreview);
+	Serial.println(" bytes of JSON Data:");
+#endif // JSON_DEBUG
+	while (client->connected()) {
+		while ((size = client->available()) > 0) {
+			c = client->read();
+			if (!isBody) {
+				msg += c;
+			}
+#ifdef JSON_DEBUG
+			sizePreview--;
+			if (sizePreview >= 0) {
+				Serial.print(c); // we read JSON data one char at a time.... but only display the first [sizePreview] bytes
+			}
+#endif // JSON_DEBUG
+
+			if (c == '{' || c == '[') {
+				isBody = true;
+			}
+			if (isBody) {
+				parser->parse(c);
+				yield();
+			}
+		}
+	}
+#ifdef JSON_DEBUG
+	Serial.println("Done parsing data!\r\n\r\n");
+	Serial.println("Message");
+	Serial.println(msg);
+
+#endif // JSON_DEBUG
+	client->stopAll(); // flush client
+	parser->setListener(NULL); // cleanup the parser
 
 }
 
@@ -125,7 +172,12 @@ void UpdateDashboard() {
 	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		"Host: " + DASHBOARD_HOST + "\r\n" +
 		"Connection: close\r\n\r\n";
-	//Serial.println(httpPayload);
+
+#ifdef JSON_DEBUG
+	Serial.println();
+	Serial.println("JSON fetch httpPayload:");
+	Serial.println(httpPayload);
+#endif
 
 	const int httpPort = 80;
 	if (!client.connect(DASHBOARD_HOST, httpPort)) {
@@ -146,28 +198,10 @@ void UpdateDashboard() {
 			return;
 		}
 	}
+	Serial.print("\r\n\r\nclient.status = ");
+	Serial.print(client.status());
 
-	boolean isBody = false;
-	char c;
-
-	int size = 0;
-	client.setNoDelay(false);
-	while (client.connected()) {
-		while ((size = client.available()) > 0) {
-			c = client.read();
-			if (c == '{' || c == '[') {
-				isBody = true;
-			}
-			if (isBody) {
-				parser.parse(c);
-				yield();
-			}
-		}
-	}
-	Serial.println("Done parsing data!");
-	client.stopAll(); // flush client
-	parser.setListener(NULL); // cleanup the parser
-
+	fetchDashboardData(&client, &parser);
 
 	tft.setRotation(3);
 	tft.fillScreen(ILI9341_BLACK);
@@ -200,7 +234,7 @@ void UpdateDashboard() {
 }
 
 //*******************************************************************************************************************************************
-// return url like  http://myDashboardHost.com/theDashboardApplicationPath/
+// return baseURL like  http://myDashboardHost.com/theDashboardApplicationPath/
 //*******************************************************************************************************************************************
 String baseURL() {
 	return String(httpText) + String(DASHBOARD_HOST) + String(DASHBOARD_APP);
@@ -254,16 +288,23 @@ int wifiConnect(int maxAttempts = 50) {
 	int countAttempt = 0;
 	WiFi.mode(WIFI_STA);
 	WiFi.begin(WIFI_SSID, WIFI_PWD);
+
+	myMacAddress = WiFi.macAddress(); // this returns 6 hex bytes, delimited by colons
+	screenMessage("MAC Address", myMacAddress.substring(0, 9), myMacAddress.substring(9, 18)); // 01:34:67:90:12:45
+
 #ifdef WIFI_DEBUG
 	Serial.print("Connecting to ");
 	Serial.print(WIFI_SSID);
 #endif
 	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
+		
+		// this tft code is not actualy DOING anything yet
 		tft.setTextColor(ILI9341_BLUE);
 		tft.setCursor(15, 195);
 		delay(250);
 		tft.setTextColor(ILI9341_RED);
 		tft.setCursor(15, 195);
+
 #ifdef WIFI_DEBUG
 		Serial.print(".");
 #endif
@@ -283,7 +324,12 @@ int wifiConnect(int maxAttempts = 50) {
 			WiFi.begin(WIFI_SSID, WIFI_PWD);
 		}
 	}
+	delay(5000);
+	myMacAddress.replace(":", "");
+	myMacAddress.replace("-", ""); // probably not used, but just in case they MAC address starts returning other well known delimiters such as dash
+	myMacAddress.replace(" ", ""); // or perhaps even a space
 
+	Serial.println("MAC Address=" + myMacAddress);
 }
 
 //*******************************************************************************************************************************************
@@ -292,11 +338,12 @@ int wifiConnect(int maxAttempts = 50) {
 //*******************************************************************************************************************************************
 void GetDasboardDataFile() {
 	// the files are expected to be static JSON, pre-generated by process at server (we don't want to wait on generation of files for display!)
-	String macAddressFileID = "2134";
-	DasboardDataFile = macAddressFileID + ".json";
-	screenMessage("Using file", "ID: " + macAddressFileID);
+	DasboardDataFile = DASHBOARD_KEY + myMacAddress + ".json";
 	delay(2000);
-
+	if (!htmlExists(DasboardDataFile)) {
+		DasboardDataFile = "2134.json";
+	}
+	screenMessage("Using file", "ID: " + DasboardDataFile);
 	// TODO - if the file does not exist, then use default.
 }
 
@@ -361,7 +408,6 @@ void setup() {
 		"Connection: Keep-Alive\r\n\r\n";
 
 	htmlSend(DASHBOARD_HOST, 80, htmlString); // test to confirm internet operational
-
 
 	GetDasboardDataFile();
 

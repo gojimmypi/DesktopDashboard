@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include <JsonListener.h>
+#include <JsonListener.h> // this is expected to be installed via ARduino IDE at someplace like: c:\Users\[username]\Documents\Arduino\libraries\Json_Streaming_Parser\JsonListener.h
 #include <JsonStreamingParser.h>
 
 
