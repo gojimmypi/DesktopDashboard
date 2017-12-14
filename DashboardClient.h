@@ -1,5 +1,12 @@
 // DashboardClient.h
 
+// https://github.com/squix78/json-streaming-parser
+// Until the library becomes available in the Arduino IDE library manager you'll have to do a bit more work by hand.
+//  1.Download this library : https://github.com/squix78/json-streaming-parser/archive/master.zip
+//	2.Rename master.zip to json - streaming - parser.zip
+//	3.Open the zip file in the Arduino IDE from menu Sketch > Include Library > Add ZIP Library...
+
+
 #ifndef _DASHBOARDCLIENT_h
 #define _DASHBOARDCLIENT_h
 
