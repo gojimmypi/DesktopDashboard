@@ -27,9 +27,26 @@ String htmlBasicHeaderText(String verb, const char* host, String);
 
 int htmlSend(const char* thisHost, int thisPort, String sendHeader);
 
+
 int doAcceptTermsAndConditions();
 
 int confirmedInternetConnectivity(const char* host);
+extern const char* httpText; // = "http://"; // this is defined once here to allow easy transition from http:// to https://
+
+bool htmlExists(String targetURL);
+
+class htmlHelper {
+	WiFiClient* myClient;
+	const char* thisHost;
+	int thisPort;
+	String sendHeader;
+
+public:
+	htmlHelper(WiFiClient*, const char*, int, String);
+	htmlHelper(WiFiClient*, const char*, int);
+	htmlHelper();
+	int Send();
+};
 
 #endif
 

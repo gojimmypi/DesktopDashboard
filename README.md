@@ -1,7 +1,5 @@
 # DesktopDashboard
 
-Desktop Dashboard using ESP8266 and ILI9341 display.
-
 What's a Desktop Dashboard? Well, I work as a Senior Software Engineer. The management staff wanted a "better, easier" method for viewing key business metrics. Although I've created SQL SSAS OLAP cubes using XLS as a front end, many web-based Crystal Reports, and an entire internal web site... well, there's still a desire for an even simpler dashboard. This solution? No login. No computer. No fussing with a phone. Just something that sits on a desk and displays dashboard business metrics.
 
 I was inspired by the weather station:
@@ -25,6 +23,5 @@ Included in that library are a variety of useful functions for getting HTML tag 
 Note that if you download the entire project and compile this with Visual Micro add-in for Visual Studio, you'll likely need to edit the DesktopDashboard.vcxproj file, replacing all the instances of C:\Users\gojimmypi... with C:\Users\YourLoginName  (does anyone know of a more graceful way to share Visual Studio projects on github?). Hopefully your Arduino libs are also installed by default at a location like:
 
 C:\Users\YourLoginName\AppData\Local\arduino15\packages\esp8266\
-
 More coming soon...
 
