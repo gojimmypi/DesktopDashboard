@@ -59,7 +59,7 @@ To compile: vMicro  - uploader - port (enter your COMx port, see Device Manager)
 You may need to manually edit DesktopDashboard.vcxproj and replace any instances of gojimmypi with your login name in the library paths.
 
 In c:\workspace-git\ it looks for a file called myPrivateSettings.h with these values:
-
+```
 const char* WIFI_SSID = "value";
 const char* WIFI_PWD = "value!";
 
@@ -83,6 +83,6 @@ const String WUNDERGROUND_CITY = "value";
 //Thingspeak Settings
 const String THINGSPEAK_CHANNEL_ID = "value";
 const String THINGSPEAK_API_READ_KEY = "value";
-
+```
 More coming soon...
 
