@@ -26,6 +26,20 @@ Note that if you download the entire project and compile this with Visual Micro 
 
 C:\Users\YourLoginName\AppData\Local\arduino15\packages\esp8266\
 
+This project is developed with the VisualMicro add-in for Visual Studio 2017 with the Arduino IDE supporting libraries.
+
+In Arduino IDE: File - Preferences Additional Board Manager 
+
+Enter http://arduino.esp8266.com/stable/package_esp8266com_index.json 
+
+In Arduino IDE: Tools - Board - Board Manager. 
+
+  Install package: ESP8266 by ESP8266 Community 
+
+In Visual Studio, vMicro - Board - NodeMCU 0.9
+(may need to Visual Studio Menu: vMicro - General - Rescan Toolchains and Librarie)
+  
+
 Libraries needed (and how to install them):
 
  https://github.com/squix78/json-streaming-parser
@@ -34,6 +48,41 @@ Libraries needed (and how to install them):
   2.Rename master.zip to json - streaming - parser.zip
   3.Open the zip file in the Arduino IDE from menu Sketch > Include Library > Add ZIP Library...
 
+Also needed (installed typically in Arduino IDE menu Sketch > Include Library > Manage Libraries)
+  Adafruit ILI9341 display library (1.0.2 original; 1.0.11 confirmed still working)
+  Adafruit GFX Library (1.1.5 original; 1.2.2 confirmed still working)
+
+When updating libraries, don't forget: Visual Studio Menu: vMicro - General - Rescan Toolchains and Libraries
+
+To compile: vMicro  - uploader - port (enter your COMx port, see Device Manager)
+
+You may need to manually edit DesktopDashboard.vcxproj and replace any instances of gojimmypi with your login name in the library paths.
+
+In c:\workspace-git\ it looks for a file called myPrivateSettings.h with these values:
+
+const char* WIFI_SSID = "value";
+const char* WIFI_PWD = "value!";
+
+const char* DASHBOARD_DEFAULT_DATA = "/path/sampledata.json";
+const char* DASHBOARD_PATH = "/DashboardDataDog/";
+const char* DASHBOARD_APP = "/myDashbaord/";
+const char* DASHBOARD_HOST = "fqdn.com";
+const char* DASHBOARD_KEY = "value";
+
+
+// TimeClient settings
+const float UTC_OFFSET = -7;
+
+// Wunderground Settings
+const boolean IS_METRIC = false;
+const String WUNDERGRROUND_API_KEY = "value";
+const String WUNDERGRROUND_LANGUAGE = "EN";
+const String WUNDERGROUND_COUNTRY = "CA";
+const String WUNDERGROUND_CITY = "value";
+
+//Thingspeak Settings
+const String THINGSPEAK_CHANNEL_ID = "value";
+const String THINGSPEAK_API_READ_KEY = "value";
 
 More coming soon...
 
