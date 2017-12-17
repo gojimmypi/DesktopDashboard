@@ -92,5 +92,6 @@ const String WUNDERGROUND_CITY = "value";
 const String THINGSPEAK_CHANNEL_ID = "value";
 const String THINGSPEAK_API_READ_KEY = "value";
 ```
-More coming soon...
+More coming soon... (dev)
+
 
