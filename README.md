@@ -44,12 +44,18 @@ Libraries needed (and how to install them):
 
  https://github.com/squix78/json-streaming-parser
  Until the library becomes available in the Arduino IDE library manager you'll have to do a bit more work by hand.
+
   1.Download this library : https://github.com/squix78/json-streaming-parser/archive/master.zip
+
   2.Rename master.zip to json - streaming - parser.zip
+
   3.Open the zip file in the Arduino IDE from menu Sketch > Include Library > Add ZIP Library...
 
+
 Also needed (installed typically in Arduino IDE menu Sketch > Include Library > Manage Libraries)
+
   Adafruit ILI9341 display library (1.0.2 original; 1.0.11 confirmed still working)
+
   Adafruit GFX Library (1.1.5 original; 1.2.2 confirmed still working)
 
 When updating libraries, don't forget: Visual Studio Menu: vMicro - General - Rescan Toolchains and Libraries
