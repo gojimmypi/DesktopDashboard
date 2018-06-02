@@ -74,6 +74,8 @@ htmlHelper myHtmlHelper;
 
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#include <WiFiClientSecure.h>
+
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
@@ -103,7 +105,7 @@ DashboardClient listener;
 
 
 
-void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
+void fetchDashboardData(WiFiClientSecure * client, JsonStreamingParser * parser) {
 	boolean isBody = false;
 	char c;
 	String msg = "";
@@ -168,7 +170,8 @@ void UpdateDashboard() {
 	Serial.print("Heap=");
 	Serial.println(ESP.getFreeHeap());
 
-	WiFiClient client;
+	//WiFiClient client;
+	WiFiClientSecure client;
 	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		"Host: " + DASHBOARD_HOST + "\r\n" +
 		"Connection: close\r\n\r\n";
@@ -179,9 +182,11 @@ void UpdateDashboard() {
 	Serial.println(httpPayload);
 #endif
 
-	const int httpPort = 80;
+	//const int httpPort = 80;
+	const int httpPort = 443;
 	if (!client.connect(DASHBOARD_HOST, httpPort)) {
 		Serial.println("connection failed");
+		Serial.println("");
 	}
 
 	client.print(httpPayload);
@@ -347,6 +352,66 @@ void GetDasboardDataFile() {
 	// TODO - if the file does not exist, then use default.
 }
 
+void testSSL() {
+	const char* host = "api.github.com";
+	const int httpsPort = 443;
+	// Use web browser to view and copy
+	// SHA1 fingerprint of the certificate
+	const char* fingerprint = "35 85 74 EF 67 35 A7 CE 40 69 50 F3 C0 F6 80 CF 80 3B 2E 19";
+
+	Serial.println("WiFi connected");
+	Serial.println("IP address: ");
+	Serial.println(WiFi.localIP());
+
+	// Use WiFiClientSecure class to create TLS connection
+	WiFiClientSecure client;
+	Serial.print("connecting to ");
+	Serial.println(host);
+	if (!client.connect(host, httpsPort)) {
+		Serial.println("TLS connection failed");
+		delay(10000);
+		return;
+	}
+
+
+	if (client.verify(fingerprint, host)) {
+		Serial.println("TLS certificate matches");
+	}
+	else {
+		Serial.println("TLS certificate doesn't match");
+	}
+
+	String url = "/repos/esp8266/Arduino/commits/master/status";
+	Serial.print("requesting URL: ");
+	Serial.println(url);
+
+	client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+		"Host: " + host + "\r\n" +
+		"User-Agent: BuildFailureDetectorESP8266\r\n" +
+		"Connection: close\r\n\r\n");
+
+	Serial.println("request sent");
+	while (client.connected()) {
+		String line = client.readStringUntil('\n');
+		if (line == "\r") {
+			Serial.println("headers received");
+			break;
+		}
+	}
+	String line = client.readStringUntil('\n');
+	if (line.startsWith("{\"state\":\"success\"")) {
+		Serial.println("esp8266/Arduino CI successfull!");
+	}
+	else {
+		Serial.println("esp8266/Arduino CI has failed");
+	}
+	Serial.println("reply was:");
+	Serial.println("==========");
+	Serial.println(line);
+	Serial.println("==========");
+	Serial.println("closing connection");
+}
+
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
@@ -401,6 +466,11 @@ void setup() {
 	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
 		Serial.println("Successfully connected!");
 	}
+
+
+	testSSL();
+
+
 
 	String htmlString = String("GET http://") + String(DASHBOARD_HOST) + "/" + " HTTP/1.1\r\n" +
 		"Host: " + String(DASHBOARD_HOST) + "\r\n" +
