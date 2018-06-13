@@ -1,5 +1,13 @@
 #include "htmlHelper.h"
-#include "ESP8266HTTPClient.h"
+
+//#if BOARD == ESP8266
+//#  include <ESP8266HTTPClient.h>
+//#elif BOARD == ESP32
+//#  include <HTTPClient.h>
+//#else
+//#  error "Target hardware BOARD nont defined."
+//#endif
+
 // htmlHelper - library of utility functions to aid in parsing headers, query strings, etc.
 // 
 // most of the helpers can be re-used, however they were created primarily for the programmatic acceptance of terms and conditions
@@ -419,7 +427,14 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	else {
 		return 0; // success! Internet access ready.
 	}
-	client.stopAll();
+#ifdef ARDUINO_ARCH_ESP8266
+	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+#endif
+
 }
 
 

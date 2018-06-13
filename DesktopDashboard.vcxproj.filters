@@ -41,6 +41,9 @@
     <ClInclude Include="tftHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GlobalDefine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="WiFiHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -1,27 +1,6 @@
+#include "GlobalDefine.h"
+
 #include "WiFiHelper.h"
-
-
-#if USE_myPrivateSettings == true 
-#include "/workspace-git/myPrivateSettings.h"
-#else
-#include "/workspace-git/myPrivateSettings.h"
-//// create your own myPrivateSettings.h, or uncomment the following lines:
-//static const char* WIFI_SSID = "my-wifi-SSID"
-//static const char* WIFI_PWD = "my-WiFi-PASSWORD"
-
-//static const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
-//static const char* DASHBOARD_PATH = "/theDataPath/";
-//static const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
-//static const char* DASHBOARD_HOST = "mydashboardhost.com";
-//static const char* DASHBOARD_KEY  = "XYZZY";
-// will build:  http://mydashboardhost.com/theDashboardApplicationPath/
-//      and:    http://mydashboardhost.com/theDataPath/
-// 
-// we will fetch data from a JSON file called http://mydashboardhost.com/theDataPath/XYZZYMMAABBCCDDEEFF
-// where MMAABBCCDDEEFF is this device's HEX MAC Address, with no spaces, dashes, or commas
-#endif
-
-
 
 #include <ESP8266HTTPClient.h> // includes WiFiClient.h
 #include <ESP8266WiFi.h>

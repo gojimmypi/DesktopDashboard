@@ -1,7 +1,26 @@
 // htmlHelper.h
 
-#ifndef htmlHelper_h_
-#define htmlHelper_h_
+#ifndef _HTMLHELPER_h
+#define _HTMLHELPER_h
+
+#include "GlobalDefine.h"
+
+#ifdef ARDUINO_ARCH_ESP8266
+#  include <ESP8266HTTPClient.h>
+#  include <ESP8266WiFi.h>
+#  define FOUND_BOARD=ESP8266
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+#  include <HTTPClient.h>
+#  include <WiFi.h>
+#  define FOUND_BOARD=ESP32
+#endif
+
+#ifndef FOUND_BOARD
+#  error "Target hardware not defined."
+#endif // ! FOUND_BOARD
+
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
@@ -9,7 +28,6 @@
 	#include "WProgram.h"
 #endif
 
-#define USE_TLS_SSL // when defined, JSON data will use SSL
 
 #include <ESP8266WiFi.h>
 #ifdef USE_TLS_SSL

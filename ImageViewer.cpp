@@ -5,12 +5,13 @@
 
 #include "ImageViewer.h"
 
-#include <ESP8266WiFi.h>
-#include <ESP8266HTTPClient.h>
+
+
+
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
-#include "htmlHelper.h" // note use of #define USE_TLS_SSL here
+#include "htmlHelper.h" // note use of define USE_TLS_SSL here
 
 #define IMAGEDEBUG true // define image debug to send processing data to serial port
 #define IMAGEDEBUG1 true // define even more image debug to send processing data to serial port
@@ -694,7 +695,14 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 				tftPtr->println(biBitCount);
 			}
 			stream->flush();
-			// stream->stopAll();
+
+#ifdef ARDUINO_ARCH_ESP8266
+			stream->stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+			stream->stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+#endif
 			delete pImageBMP; // once we process the data, we're done with it.
 		} // http file found
 		else
@@ -976,7 +984,14 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 			}
 
 			stream->flush();
-			// stream->stopAll();
+
+#ifdef ARDUINO_ARCH_ESP8266
+			stream->stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+			stream->stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+#endif
 			delete pImageBMP;
 		} // if httpcode = 200
 		else {

@@ -3,6 +3,23 @@
 #ifndef _IMAGEVIEWER_h
 #define _IMAGEVIEWER_h
 
+#ifdef ARDUINO_ARCH_ESP8266
+#  include <ESP8266HTTPClient.h>
+#  include <ESP8266WiFi.h>
+#  define FOUND_BOARD=ESP8266
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+#  include <HTTPClient.h>
+#  include <WiFi.h>
+#  define FOUND_BOARD=ESP32
+#endif
+
+#ifndef FOUND_BOARD
+#  error "Target hardware not defined."
+#endif // ! FOUND_BOARD
+
+
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
 #else

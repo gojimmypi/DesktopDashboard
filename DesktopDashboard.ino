@@ -1,5 +1,5 @@
 // 
-// created in Visual Studio 2015 with Visual Micro add-in:  vMicro - New Arduino Project
+// created in Visual Studio 2017 with Visual Micro add-in:  vMicro - New Arduino Project
 //   https://www.visualstudio.com/downloads/
 //
 //   http://www.visualmicro.com/
@@ -15,42 +15,13 @@
 // Target display is like the Adafruit ILI9341 http://www.adafruit.com/products/1651
 //
 //***************************************************
+#include "GlobalDefine.h"
 
-#define SCREEN_DEBUG // when defined, display low level screen debug info 
-#define JSON_DEBUG // when defined, display JSON debug info 
-#define WIFI_DEBUG // when defined, display WiFi debug info 
-#define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
+//#define SCREEN_DEBUG // when defined, display low level screen debug info 
+//#define JSON_DEBUG // when defined, display JSON debug info 
+//#define WIFI_DEBUG // when defined, display WiFi debug info 
+//#define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
 
-
-//*******************************************************************************************************************************************
-// Begin user config
-//*******************************************************************************************************************************************
-// My config is stored in myPrivateSettings.h file 
-// if you choose not to use such a file, set this to false:
-#define USE_myPrivateSettings true
-
-// Note the two possible file name string formats.
-#if USE_myPrivateSettings == true 
-#include "/workspace-git/myPrivateSettings.h"
-#else
-//// create your own myPrivateSettings.h, or uncomment the following lines:
-//static const char* WIFI_SSID = "my-wifi-SSID"
-//static const char* WIFI_PWD = "my-WiFi-PASSWORD"
-
-//static const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
-//static const char* DASHBOARD_PATH = "/theDataPath/";
-//static const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
-//static const char* DASHBOARD_HOST = "mydashboardhost.com";
-//static const char* DASHBOARD_KEY  = "XYZZY";
-// will build:  http://mydashboardhost.com/theDashboardApplicationPath/
-//      and:    http://mydashboardhost.com/theDataPath/
-// 
-// we will fetch data from a JSON file called http://mydashboardhost.com/theDataPath/XYZZYMMAABBCCDDEEFF
-// where MMAABBCCDDEEFF is this device's HEX MAC Address, with no spaces, dashes, or commas
-#endif
-//*******************************************************************************************************************************************
-// End user config
-//*******************************************************************************************************************************************
 #include "DashboardClient.h"
 #include "htmlHelper.h"
 
@@ -58,21 +29,7 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 htmlHelper myHtmlHelper;
 
 
-// Statements like:
-// #pragma message(Reminder "Fix this problem!")
-// Which will cause messages like:
-// C:\Source\Project\main.cpp(47): Reminder: Fix this problem!
-// to show up during compiles. Note that you can NOT use the
-// words "error" or "warning" in your reminders, since it will
-// make the IDE think it should abort execution. You can double
-// click on these messages and jump to the line in question.
-//
-// see https://stackoverflow.com/questions/5966594/how-can-i-use-pragma-message-so-that-the-message-points-to-the-filelineno
-//
-#define Stringize( L )     #L 
-#define MakeString( M, L ) M(L)
-#define $Line MakeString( Stringize, __LINE__ )
-#define Reminder __FILE__ "(" $Line ") : Reminder: "
+
 
 //#include <vector>
 //int test()
@@ -88,6 +45,26 @@ htmlHelper myHtmlHelper;
 // include "wifiConnectHelper.h" // no longer used, see htmlHelper
 // include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 // include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
+
+#ifdef ARDUINO_ARCH_ESP8266
+#  include <ESP8266HTTPClient.h>
+#  include <ESP8266WiFi.h>
+#  define FOUND_BOARD=ESP8266
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+#  include <HTTPClient.h>
+#  include <WiFi.h>
+#  define FOUND_BOARD=ESP32
+#endif
+
+#ifndef FOUND_BOARD
+#pragma message(Reminder "Error Target hardware not defined !")
+#endif // ! FOUND_BOARD
+
+
+//
+// #include <ESP8266WiFi.h>
 
 #include <ESP8266HTTPClient.h> // includes WiFiClient.h
 
@@ -170,7 +147,16 @@ void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
 	Serial.println(msg);
 
 #endif // JSON_DEBUG
-	// client->stopAll(); // flush client
+
+
+#ifdef ARDUINO_ARCH_ESP8266
+	client->stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+	client->stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+#endif
+
 	parser->setListener(NULL); // cleanup the parser
 
 }
@@ -245,7 +231,14 @@ void UpdateDashboard() {
 		}
 	}
 	Serial.print("\r\n\r\nclient.status = ");
-	Serial.print(client.status());
+
+#ifdef ARDUINO_ARCH_ESP8266
+	Serial.print(client.status()); // (only ESP8266 seems to have implemented (client.status)
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+	Serial.print("client.status() not available for ESP32"); // flush client (the ESP32 does not seem to have implemented client.status)
+#endif	
 
 	fetchDashboardData(&client, &parser);
 
@@ -323,6 +316,60 @@ void showStartupImage() {
 }
 
 
+
+//*******************************************************************************************************************************************
+// wifiConnect 
+// 
+//   WiFi.begin with repeated attempts with TFT screen and optional serial progress indication
+//
+//*******************************************************************************************************************************************
+//int wifiConnect(int maxAttempts = 50) {
+//	int countAttempt = 0;
+//	WiFi.mode(WIFI_STA);
+//	WiFi.begin(WIFI_SSID, WIFI_PWD);
+//
+//	myMacAddress = WiFi.macAddress(); // this returns 6 hex bytes, delimited by colons
+//	screenMessage("MAC Address", myMacAddress.substring(0, 9), myMacAddress.substring(9, 18)); // 01:34:67:90:12:45
+//
+//#ifdef WIFI_DEBUG
+//	Serial.print("Connecting to ");
+//	Serial.print(WIFI_SSID);
+//#endif
+//	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
+//		
+//		// this tft code is not actualy DOING anything yet
+//		tft.setTextColor(ILI9341_BLUE);
+//		tft.setCursor(15, 195);
+//		delay(250);
+//		tft.setTextColor(ILI9341_RED);
+//		tft.setCursor(15, 195);
+//
+//#ifdef WIFI_DEBUG
+//		Serial.print(".");
+//#endif
+//		delay(250);
+//		countAttempt++;
+//		if (countAttempt > maxAttempts) {
+//			countAttempt = 0;
+//#ifdef WIFI_DEBUG
+//			Serial.println("WiFi Disconnect... ");
+//#endif
+//			WiFi.disconnect();
+//			delay(5000);
+//#ifdef WIFI_DEBUG
+//			Serial.println("WiFi Retrying. ");
+//#endif
+//			WiFi.mode(WIFI_STA);
+//			WiFi.begin(WIFI_SSID, WIFI_PWD);
+//		}
+//	}
+//	delay(5000);
+//	myMacAddress.replace(":", "");
+//	myMacAddress.replace("-", ""); // probably not used, but just in case they MAC address starts returning other well known delimiters such as dash
+//	myMacAddress.replace(" ", ""); // or perhaps even a space
+//
+//	Serial.println("MAC Address=" + myMacAddress);
+//}
 
 //*******************************************************************************************************************************************
 // 
@@ -486,7 +533,7 @@ void setup() {
 	tftScreenDiagnostics();
 
 	Serial.println(F("Setup Done!"));
-#pragma message(Reminder "Fix this problem!")
+// #pragma message(Reminder "Fix this problem!")
 }
 
 //*******************************************************************************************************************************************
