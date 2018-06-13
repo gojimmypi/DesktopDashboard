@@ -31,8 +31,12 @@
 //
 //  <HTML><HEAD><TITLE> Web Authentication Redirect</TITLE><META http-equiv="Cache-control" content="no-cache"><META http-equiv="Pragma" content="no-cache"><META http-equiv="Expires" content="-1"><META http-equiv="refresh" content="1; URL=http://1.1.1.1/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.htmlap_mac=00:11:22:33:44:55&client_mac=11:22:33:44:55:66&wlan=My%20Visitor%20WiFi&redirect=www.google.com/"></HEAD></HTML>
 
-
+#ifdef USE_TLS_SSL
+WiFiClient client; // TODO WiFiClientSecure
+#else
 WiFiClient client;
+#endif
+
 // Use WiFiClient class to create TCP connections
 const int myDebugLevel = 3; // 3 is maximum verbose level
 
@@ -63,7 +67,19 @@ int htmlHelper::Send() {
 	return htmlSend(thisHost, thisPort, sendHeader); //const char* thisHost, int thisPort, String sendHeader
 }
 
-// basic helper
+#ifdef USE_TLS_SSL
+htmlHelper::htmlHelper(WiFiClientSecure* thisClient, const char* Host, int Port) {
+	myClient = thisClient;
+	thisHost = Host;
+	thisPort = Port;
+}
+
+// helper with initial HTML header to send
+htmlHelper::htmlHelper(WiFiClientSecure* thisClient, const char* Host, int Port, String Header) {
+	htmlHelper(thisClient, Host, Port);
+	sendHeader = Header;
+}
+#else
 htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port) {
 	myClient = thisClient;
 	thisHost = Host;
@@ -75,6 +91,9 @@ htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port, Strin
 	htmlHelper(thisClient, Host, Port);
 	sendHeader = Header;
 }
+#endif
+
+// basic helper
 htmlHelper::htmlHelper() {
 	// un-initialized htmlHelper declaration
 }
@@ -220,7 +239,7 @@ uint ResponseContentLength = -1;
 //                  2 failed to connect
 //                  3 client timeout (see MAX_CONNECTION_TIMEOUT_MILLISECONDS)
 //                  4 out of memory (rare, but perhaps already running low on memory or unusually large header)
-//                  5 content to large to load (would be out of memory if content attempted to load)
+//                  5 content too large to load (would be out of memory if content attempted to load)
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
@@ -229,7 +248,10 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 
 	Serial.println("*****************************************************************");
 	Serial.print("Connecting to ");
-	Serial.println(thisHost); // e.g. www.google.com, no http, no path, just dns name
+	Serial.print(thisHost); // e.g. www.google.com, no http, no path, just dns name
+	Serial.print("; port ");
+	Serial.println(thisPort);
+	Serial.println("*****************************************************************");
 
 	if (!client.connect(thisHost, thisPort)) {
 		Serial.println("connection failed");

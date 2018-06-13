@@ -10,6 +10,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9341.h"
+#include "htmlHelper.h" // note use of #define USE_TLS_SSL here
 
 #define IMAGEDEBUG true // define image debug to send processing data to serial port
 #define IMAGEDEBUG1 true // define even more image debug to send processing data to serial port
@@ -47,7 +48,6 @@ void imageViewDelay() {
 
 }
 
-
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
@@ -74,6 +74,10 @@ int ah2i(uint8_t s)
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
+#ifdef USE_TLS_SSL
+#else
+#endif
+
 uint16_t read16(WiFiClient * f) {
 
 	uint16_t result;
@@ -85,6 +89,9 @@ uint16_t read16(WiFiClient * f) {
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
+#ifdef USE_TLS_SSL
+#else
+#endif
 uint32_t read32(WiFiClient * f) {
 	uint32_t result;
 	((uint8_t *)&result)[0] = f->read(); // LSB
@@ -121,6 +128,9 @@ uint32_t read32(unsigned char * d, int fromIndex) {
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
+#ifdef USE_TLS_SSL
+#else
+#endif
 unsigned char* bmpRawReader(WiFiClient * f) {
 	// based on code from http://stackoverflow.com/questions/9296059/read-pixel-value-in-bmp-file
 	uint8_t info[54];
@@ -232,7 +242,11 @@ bool abortMidStream = false;
 //
 // TODO - add maximum amount of time to read before giving up
 // ***************************************************************************************************************************************************************
+#ifdef USE_TLS_SSL
+uint8_t byteInStream(WiFiClient * stream, int position) { // TODO should this be WiFiClientSecure ? (the problem here is that there's no compatible http.getStreamPtr();
+#else
 uint8_t byteInStream(WiFiClient * stream, int position) {
+#endif
 	uint32_t thisPayloadBytesAvailable = 0;
 	int thisPayloadByteCount = 0;
 	int thisAttemptCount = 0;
@@ -445,7 +459,12 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
+
+#ifdef USE_TLS_SSL
 			WiFiClient * stream = http.getStreamPtr();
+#else
+			WiFiClient * stream = http.getStreamPtr();
+#endif
 			
 			unsigned char testChar = byteInStream(stream, 1); // read the first chunk of data. TODO ensure we read at least 54 bytes of header.
 
@@ -675,7 +694,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 				tftPtr->println(biBitCount);
 			}
 			stream->flush();
-			stream->stopAll();
+			// stream->stopAll();
 			delete pImageBMP; // once we process the data, we're done with it.
 		} // http file found
 		else
@@ -740,6 +759,10 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 			Serial.printf("After allocation heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
+
+#ifdef USE_TLS_SSL
+#else
+#endif
 			WiFiClient * stream = http.getStreamPtr();
 
 			Serial.println("Step 1");
@@ -953,7 +976,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 			}
 
 			stream->flush();
-			stream->stopAll();
+			// stream->stopAll();
 			delete pImageBMP;
 		} // if httpcode = 200
 		else {
@@ -1169,7 +1192,7 @@ void dldDImage(Adafruit_ILI9341 * tftPtr, uint16_t  xloc, uint16_t yloc) {
 	// this is the old, "load it all into memory first" method. Use bmpDrawFromUrlStream instead
 	uint16_t  r;
 	uint8_t hb, lb, cv, lv1 = 0, lv2 = 0, cb1, cb2;
-	uint16_t  frsize, iwidth, iheight;
+	uint16_t  frsize, iwidth = 0, iheight = 0;
 	int x = 0, y = 0;
 	int firstpacket = 0;
 	int buffcnt = 0;
@@ -1203,6 +1226,10 @@ void dldDImage(Adafruit_ILI9341 * tftPtr, uint16_t  xloc, uint16_t yloc) {
 			uint8_t buff[2048] = { 0 };
 			int  buffidx = sizeof(buff);
 			// get tcp stream
+
+#ifdef USE_TLS_SSL
+#else
+#endif
 			WiFiClient * stream = http.getStreamPtr();
 			uint16_t BytesToRead1 = 0;
 			uint16_t BytesToRead2 = 8192;
@@ -1502,7 +1529,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, uint8_t x, uint16_t y) {
 	uint32_t total_parse = 0;
 	uint32_t total_draw = 0;
 
-	HTTPClient http;
+	HTTPClient http; // TODO WiFiClientSecure conversion
 
 	Serial.print("[HTTP] begin...\n");
 
@@ -1516,7 +1543,12 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, uint8_t x, uint16_t y) {
 	Serial.println();
 	// start connection and send HTTP header
 	int httpCode = http.GET();
+
+#ifdef USE_TLS_SSL
+	WiFiClient * stream = http.getStreamPtr(); // TODO WiFiClientSecure conversion
+#else
 	WiFiClient * stream = http.getStreamPtr();
+#endif
 
 	// Parse BMP header
 	if (read16(stream) == 0x4D42) { // BMP signature

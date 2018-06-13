@@ -21,6 +21,7 @@
 #define WIFI_DEBUG // when defined, display WiFi debug info 
 #define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
 
+
 //*******************************************************************************************************************************************
 // Begin user config
 //*******************************************************************************************************************************************
@@ -32,15 +33,15 @@
 #if USE_myPrivateSettings == true 
 #include "/workspace-git/myPrivateSettings.h"
 #else
-// create your own myPrivateSettings.h, or uncomment the following lines:
-//const char* WIFI_SSID = "my-wifi-SSID"
-//const char* WIFI_PWD = "my-WiFi-PASSWORD"
+//// create your own myPrivateSettings.h, or uncomment the following lines:
+//static const char* WIFI_SSID = "my-wifi-SSID"
+//static const char* WIFI_PWD = "my-WiFi-PASSWORD"
 
-//const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
-//const char* DASHBOARD_PATH = "/theDataPath/";
-//const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
-//const char* DASHBOARD_HOST = "mydashboardhost.com";
-//const char* DASHBOARD_KEY  = "XYZZY";
+//static const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
+//static const char* DASHBOARD_PATH = "/theDataPath/";
+//static const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
+//static const char* DASHBOARD_HOST = "mydashboardhost.com";
+//static const char* DASHBOARD_KEY  = "XYZZY";
 // will build:  http://mydashboardhost.com/theDashboardApplicationPath/
 //      and:    http://mydashboardhost.com/theDataPath/
 // 
@@ -54,8 +55,24 @@
 #include "htmlHelper.h"
 
 String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
-String myMacAddress = "";
 htmlHelper myHtmlHelper;
+
+
+// Statements like:
+// #pragma message(Reminder "Fix this problem!")
+// Which will cause messages like:
+// C:\Source\Project\main.cpp(47): Reminder: Fix this problem!
+// to show up during compiles. Note that you can NOT use the
+// words "error" or "warning" in your reminders, since it will
+// make the IDE think it should abort execution. You can double
+// click on these messages and jump to the line in question.
+//
+// see https://stackoverflow.com/questions/5966594/how-can-i-use-pragma-message-so-that-the-message-points-to-the-filelineno
+//
+#define Stringize( L )     #L 
+#define MakeString( M, L ) M(L)
+#define $Line MakeString( Stringize, __LINE__ )
+#define Reminder __FILE__ "(" $Line ") : Reminder: "
 
 //#include <vector>
 //int test()
@@ -72,16 +89,23 @@ htmlHelper myHtmlHelper;
 // include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 // include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
 
-#include <ESP8266HTTPClient.h>
+#include <ESP8266HTTPClient.h> // includes WiFiClient.h
+
 #include <ESP8266WiFi.h>
+#ifdef USE_TLS_SSL
+// #include <WiFiClientSecure.h>
+#endif // USE_TLS_SSL
+
+
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
-#include "FreeSansBold24pt7b.h"  // copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
+#include "FreeSansBold24pt7b.h"  // Adafruit_ILI9341.h is needed; copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 #include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
 #include "JsonListener.h"
 
+#include "WiFiHelper.h"
 #include "htmlHelper.h"          // htmlHelper files copied to this project from https://github.com/gojimmypi/VisitorWiFi-ESP8266
 
 
@@ -98,12 +122,15 @@ htmlHelper myHtmlHelper;
 #include "tftHelper.h"           // tft screen printing 
 
 DashboardClient listener;
+String myMacAddress;
 
 
-
-
-
+#ifdef USE_TLS_SSL
+void fetchDashboardData(WiFiClientSecure * client, JsonStreamingParser * parser) {
+	Serial.println("Using WiFiClientSecure!");
+#else
 void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
+#endif
 	boolean isBody = false;
 	char c;
 	String msg = "";
@@ -143,7 +170,7 @@ void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
 	Serial.println(msg);
 
 #endif // JSON_DEBUG
-	client->stopAll(); // flush client
+	// client->stopAll(); // flush client
 	parser->setListener(NULL); // cleanup the parser
 
 }
@@ -168,7 +195,15 @@ void UpdateDashboard() {
 	Serial.print("Heap=");
 	Serial.println(ESP.getFreeHeap());
 
+#ifdef USE_TLS_SSL
+	WiFiClientSecure client;
+	const int httpPort = 443;
+	Serial.println("Using WiFiClientSecure!");
+#else
 	WiFiClient client;
+	const int httpPort = 80;
+#endif
+
 	String httpPayload = String("GET ") + "http://" + DASHBOARD_HOST + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		"Host: " + DASHBOARD_HOST + "\r\n" +
 		"Connection: close\r\n\r\n";
@@ -179,15 +214,26 @@ void UpdateDashboard() {
 	Serial.println(httpPayload);
 #endif
 
-	const int httpPort = 80;
+
 	if (!client.connect(DASHBOARD_HOST, httpPort)) {
 		Serial.println("connection failed");
+		Serial.println("");
 	}
 
 	client.print(httpPayload);
 
 	int retryCounter = 0;
 	while (!client.available()) {
+		Serial.print("WiFi client not available; status = ");
+		Serial.println(client.status());
+		
+		WiFi.reconnect();
+
+		if (client.status() == 4) {
+			// 4 : WL_CONNECT_FAILED if password is incorrect
+			Serial.println("Reconnecting WiFi...");
+			wifiConnect(50);
+		}
 		delay(1000);
 		retryCounter++;
 		if (retryCounter > 10) {
@@ -279,60 +325,6 @@ void showStartupImage() {
 
 
 //*******************************************************************************************************************************************
-// wifiConnect 
-// 
-//   WiFi.begin with repeated attempts with TFT screen and optional serial progress indication
-//
-//*******************************************************************************************************************************************
-int wifiConnect(int maxAttempts = 50) {
-	int countAttempt = 0;
-	WiFi.mode(WIFI_STA);
-	WiFi.begin(WIFI_SSID, WIFI_PWD);
-
-	myMacAddress = WiFi.macAddress(); // this returns 6 hex bytes, delimited by colons
-	screenMessage("MAC Address", myMacAddress.substring(0, 9), myMacAddress.substring(9, 18)); // 01:34:67:90:12:45
-
-#ifdef WIFI_DEBUG
-	Serial.print("Connecting to ");
-	Serial.print(WIFI_SSID);
-#endif
-	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
-		
-		// this tft code is not actualy DOING anything yet
-		tft.setTextColor(ILI9341_BLUE);
-		tft.setCursor(15, 195);
-		delay(250);
-		tft.setTextColor(ILI9341_RED);
-		tft.setCursor(15, 195);
-
-#ifdef WIFI_DEBUG
-		Serial.print(".");
-#endif
-		delay(250);
-		countAttempt++;
-		if (countAttempt > maxAttempts) {
-			countAttempt = 0;
-#ifdef WIFI_DEBUG
-			Serial.println("WiFi Disconnect... ");
-#endif
-			WiFi.disconnect();
-			delay(5000);
-#ifdef WIFI_DEBUG
-			Serial.println("WiFi Retrying. ");
-#endif
-			WiFi.mode(WIFI_STA);
-			WiFi.begin(WIFI_SSID, WIFI_PWD);
-		}
-	}
-	delay(5000);
-	myMacAddress.replace(":", "");
-	myMacAddress.replace("-", ""); // probably not used, but just in case they MAC address starts returning other well known delimiters such as dash
-	myMacAddress.replace(" ", ""); // or perhaps even a space
-
-	Serial.println("MAC Address=" + myMacAddress);
-}
-
-//*******************************************************************************************************************************************
 // 
 // TODO - based on MAC address, determine data file name
 //*******************************************************************************************************************************************
@@ -345,6 +337,67 @@ void GetDasboardDataFile() {
 	}
 	screenMessage("Using file", "ID: " + DasboardDataFile);
 	// TODO - if the file does not exist, then use default.
+}
+
+void testSSL() {
+	const char* host = "api.github.com";
+	const int httpsPort = 443;
+	// Use web browser to view and copy
+	// SHA1 fingerprint of the certificate
+	const char* fingerprint = "35 85 74 EF 67 35 A7 CE 40 69 50 F3 C0 F6 80 CF 80 3B 2E 19";
+
+	Serial.println("WiFi connected");
+	Serial.println("IP address: ");
+	Serial.println(WiFi.localIP());
+
+	// Use WiFiClientSecure class to create TLS connection
+	WiFiClientSecure client;
+	Serial.print("connecting to ");
+	Serial.println(host);
+	if (!client.connect(host, httpsPort)) {
+		Serial.println("TLS connection failed");
+		delay(10000);
+		return;
+	}
+
+
+	if (client.verify(fingerprint, host)) {
+		Serial.println("TLS certificate matches");
+	}
+	else {
+		Serial.println("TLS certificate doesn't match");
+	}
+
+	String url = "/repos/esp8266/Arduino/commits/master/status";
+	Serial.print("requesting URL: ");
+	Serial.println(url);
+
+	client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+		"Host: " + host + "\r\n" +
+		"User-Agent: BuildFailureDetectorESP8266\r\n" +
+		"Connection: close\r\n\r\n");
+
+	Serial.println("request sent");
+	while (client.connected()) {
+		String line = client.readStringUntil('\n');
+		if (line == "\r") {
+			Serial.println("headers received");
+			break;
+		}
+	}
+	String line = client.readStringUntil('\n');
+	if (line.startsWith("{\"state\":\"success\"")) {
+		Serial.println("esp8266/Arduino CI successfull!");
+	}
+	else {
+		Serial.println("esp8266/Arduino CI has failed");
+	}
+	Serial.println("reply was:");
+	Serial.println("==========");
+	Serial.println(line);
+	Serial.println("==========");
+	Serial.println("closing connection");
+	// client.stop(); // don't stop the local client here, as other instances will not be able to reconnect (TODO - have exactly one WiFiClientSecure client;)
 }
 
 //*******************************************************************************************************************************************
@@ -402,6 +455,11 @@ void setup() {
 		Serial.println("Successfully connected!");
 	}
 
+
+	testSSL();
+
+
+
 	String htmlString = String("GET http://") + String(DASHBOARD_HOST) + "/" + " HTTP/1.1\r\n" +
 		"Host: " + String(DASHBOARD_HOST) + "\r\n" +
 		"Content-Encoding: identity" + "\r\n" +
@@ -428,7 +486,7 @@ void setup() {
 	tftScreenDiagnostics();
 
 	Serial.println(F("Setup Done!"));
-
+#pragma message(Reminder "Fix this problem!")
 }
 
 //*******************************************************************************************************************************************

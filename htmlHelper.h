@@ -1,14 +1,22 @@
 // htmlHelper.h
 
-#ifndef _HTMLHELPER_h
-#define _HTMLHELPER_h
-#include <ESP8266WiFi.h>
+#ifndef htmlHelper_h_
+#define htmlHelper_h_
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
 #else
 	#include "WProgram.h"
 #endif
+
+#define USE_TLS_SSL // when defined, JSON data will use SSL
+
+#include <ESP8266WiFi.h>
+#ifdef USE_TLS_SSL
+// #include <WiFiClientSecure.h> // included in <ESP8266WiFi.h>
+#else
+#endif // USE_TLS_SSL
+
 
 String queryStringValue(String urlString, String keyString);
 
@@ -36,14 +44,27 @@ extern const char* httpText; // = "http://"; // this is defined once here to all
 bool htmlExists(String targetURL);
 
 class htmlHelper {
+
+	// depending on the USE_TLS_SSL the myClient is either WiFiClient or WiFiClientSecure (but they are different! not sure secure or not...)
+
+#ifdef USE_TLS_SSL
+	WiFiClientSecure* myClient;
+#else
 	WiFiClient* myClient;
+#endif
 	const char* thisHost;
 	int thisPort;
 	String sendHeader;
 
 public:
+
+#ifdef USE_TLS_SSL
+	htmlHelper(WiFiClientSecure*, const char*, int, String);
+	htmlHelper(WiFiClientSecure*, const char*, int);
+#else
 	htmlHelper(WiFiClient*, const char*, int, String);
 	htmlHelper(WiFiClient*, const char*, int);
+#endif
 	htmlHelper();
 	int Send();
 };
