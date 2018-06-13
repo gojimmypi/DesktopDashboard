@@ -17,11 +17,6 @@
 //***************************************************
 #include "GlobalDefine.h"
 
-//#define SCREEN_DEBUG // when defined, display low level screen debug info 
-//#define JSON_DEBUG // when defined, display JSON debug info 
-//#define WIFI_DEBUG // when defined, display WiFi debug info 
-//#define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
-
 #include "DashboardClient.h"
 #include "htmlHelper.h"
 
@@ -213,13 +208,14 @@ void UpdateDashboard() {
 		Serial.print("WiFi client not available; status = ");
 		Serial.println(client.status());
 		
-		WiFi.reconnect();
+		// this code will cause crash!
+		//WiFi.reconnect();
 
-		if (client.status() == 4) {
-			// 4 : WL_CONNECT_FAILED if password is incorrect
-			Serial.println("Reconnecting WiFi...");
-			wifiConnect(50);
-		}
+		//if (client.status() == 4) {
+		//	// 4 : WL_CONNECT_FAILED if password is incorrect
+		//	Serial.println("Reconnecting WiFi...");
+		//	wifiConnect(50);
+		//}
 		delay(1000);
 		retryCounter++;
 		if (retryCounter > 10) {

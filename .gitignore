@@ -241,4 +241,4 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 
-__vm/.DesktopDashboard.vsarduino.h
+__vm/*.*
