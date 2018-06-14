@@ -234,14 +234,14 @@ void UpdateDashboard() {
 				break;
 			}
 		}
-		else {
-			Serial.print("No data available; status = ");
-			Serial.println(client.status());
-			Serial.println(DEBUG_SEPARATOR);
-			Serial.println("waiting 60 seconds...");
-			delay(60000);
-			return;
-		}
+		//else {
+		//	Serial.print("No data available; status = ");
+		//	Serial.println(client.status());
+		//	Serial.println(DEBUG_SEPARATOR);
+		//	Serial.println("waiting 60 seconds...");
+		//	delay(60000);
+		//	return;
+		//}
 	}
 
 
