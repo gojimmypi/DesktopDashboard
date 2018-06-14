@@ -27,16 +27,16 @@
 //#define TFT_CS 10
 //
 // For the esp shield, these are the default:
-
 #ifdef ARDUINO_ARCH_ESP8266
-#define TFT_DC 2
-#define TFT_CS 15
+	#define TFT_DC 2
+	#define TFT_CS 15
+	#define FOUND_BOARD=ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-#define TFT_CS 14  // Chip select control pin
-#define TFT_DC 27  // Data Command control pin
-#define TFT_RST 33 // Reset pin (could connect to Arduino RESET pin)
+	#define TFT_CS 14  // Chip select control pin
+	#define TFT_DC 27  // Data Command control pin
+	#define TFT_RST 33 // Reset pin (could connect to Arduino RESET pin)
 
 // Screen
 //#define TFT_LED_PIN 32
@@ -46,7 +46,13 @@
 //#define TFT_CLK_PIN 18
 // above #define TFT_RST_PIN 33
 //#define TFT_MISO_PIN 19
+
+	#define FOUND_BOARD=ESP32
 #endif
+
+#ifndef FOUND_BOARD
+#pragma message(Reminder "Error Target hardware not defined !")
+#endif // ! FOUND_BOARD
 
 
 #define Touch_CS 4

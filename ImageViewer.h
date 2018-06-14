@@ -16,7 +16,7 @@
 #endif
 
 #ifndef FOUND_BOARD
-#  error "Target hardware not defined."
+#pragma message(Reminder "Error Target hardware not defined !")
 #endif // ! FOUND_BOARD
 
 

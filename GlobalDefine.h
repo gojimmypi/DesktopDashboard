@@ -25,6 +25,7 @@
 //static const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
 //static const char* DASHBOARD_HOST = "mydashboardhost.com";
 //static const char* DASHBOARD_KEY  = "XYZZY";
+//static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50 F3 C0 F6 80 CF 80 3B 2E 19";
 // will build:  http://mydashboardhost.com/theDashboardApplicationPath/
 //      and:    http://mydashboardhost.com/theDataPath/
 // 
@@ -37,11 +38,13 @@
 
 
 
-// #define USE_TLS_SSL // when defined, JSON data will use SSL
+#define USE_TLS_SSL // when defined, JSON data will use SSL
 #define SCREEN_DEBUG // when defined, display low level screen debug info 
 #define JSON_DEBUG // when defined, display JSON debug info 
 #define WIFI_DEBUG // when defined, display WiFi debug info 
 #define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
+#define HTML_DEBUG // when defined, display WiFi debug info 
+#define DEBUG_SEPARATOR "***********************************"
 
 // Statements like:
 // #pragma message(Reminder "Fix this problem!")
@@ -59,6 +62,14 @@
 #define $Line MakeString( Stringize, __LINE__ )
 #define Reminder __FILE__ "(" $Line ") : Reminder: "
 
+// some optional Serial.print() statements...
+#ifdef HTTP_DEBUG
+#define HTTP_DEBUG_PRINT(string) (Serial.print(string))
+#endif
+
+#ifndef HTTP_DEBUG
+#define HTTP_DEBUG_PRINT(string)
+#endif
 
 
 #endif

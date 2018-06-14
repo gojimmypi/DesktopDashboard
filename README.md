@@ -1,6 +1,6 @@
 # DesktopDashboard
 
-Desktop Dashboard using ESP8266 and ILI9341 display, as see here:
+Desktop Dashboard using ESP8266 and ILI9341 display, as seen here:
 
 https://www.youtube.com/watch?v=TmvaU6EQsAc
 
@@ -66,16 +66,25 @@ To compile: vMicro  - uploader - port (enter your COMx port, see Device Manager)
 
 You may need to manually edit DesktopDashboard.vcxproj and replace any instances of gojimmypi with your login name in the library paths.
 
+Application settings are found in two files:
+
+In the application, there is a [GlobalDefine.h](https://github.com/gojimmypi/DesktopDashboard/blob/master/GlobalDefine.h) that contains compiler-specific settings.
+
 In c:\workspace-git\ it looks for a file called myPrivateSettings.h with these values:
 ```
-const char* WIFI_SSID = "value";
-const char* WIFI_PWD = "value!";
+// myPrivateSettings.h
 
-const char* DASHBOARD_DEFAULT_DATA = "/path/sampledata.json";
-const char* DASHBOARD_PATH = "/DashboardDataDog/";
-const char* DASHBOARD_APP = "/myDashbaord/";
-const char* DASHBOARD_HOST = "fqdn.com";
-const char* DASHBOARD_KEY = "value";
+#ifndef _MYPRIVATESETTINGS_h
+#define _MYPRIVATESETTINGS_h
+
+static const char* WIFI_SSID = "value";
+static const char* WIFI_PWD = "value!";
+
+static const char* DASHBOARD_DEFAULT_DATA = "/path/sampledata.json";
+static const char* DASHBOARD_PATH = "/DashboardDataDog/";
+static const char* DASHBOARD_APP = "/myDashbaord/";
+static const char* DASHBOARD_HOST = "fqdn.com";
+static const char* DASHBOARD_KEY = "value";
 
 
 // TimeClient settings
@@ -91,7 +100,8 @@ const String WUNDERGROUND_CITY = "value";
 //Thingspeak Settings
 const String THINGSPEAK_CHANNEL_ID = "value";
 const String THINGSPEAK_API_READ_KEY = "value";
+#endif
 ```
 More coming soon... (dev)
 
-
+* Note that wunderground is no longer giving away. See [this link](https://twitter.com/thingpulse/status/1006419150057689089)

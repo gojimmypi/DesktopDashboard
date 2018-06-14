@@ -16,10 +16,10 @@
 //*******************************************************************************************************************************************
 int wifiConnect(int maxAttempts) {
 #ifdef WIFI_DEBUG
-	Serial.println("*****************************************************************");
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.print("wifiConnect: Connecting to ");
 	Serial.println(WIFI_SSID);
-	Serial.println("*****************************************************************");
+	Serial.println(DEBUG_SEPARATOR);
 #endif
 
 	int countAttempt = 0;

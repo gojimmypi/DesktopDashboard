@@ -18,6 +18,7 @@
     <None Include="DesktopDashboard.ino" />
     <None Include="doc\adafruit-gfx-graphics-library.pdf" />
     <None Include="doc\ILI9341.pdf" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FreeSansBold24pt7b.h">

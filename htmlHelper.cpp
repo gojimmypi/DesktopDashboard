@@ -64,6 +64,7 @@ String PostData;          // = "buttonClicked=4&redirect_url=www.google.com&acti
 String Request;           // = "POST /login.html HTTP/1.1\r\n";
 String ResponseLocation;
 String ResponseContentLocation;
+String ResponseFirstLine;
 String accessRedirect;    // a value like "/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html%26ap_mac=00:11:22:33:44:55%26client_mac=cc:11:22:33:44:55%26wlan=Visitor%20WiFi%26redirect=www.google.com/"
 const String CrLf = "\n\r";
 
@@ -254,20 +255,28 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	String thisResponse; thisResponse = "";
 	String thisResponseHeader; thisResponseHeader = "";
 
-	Serial.println("*****************************************************************");
+#ifdef HTML_DEBUG
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.print("Connecting to ");
 	Serial.print(thisHost); // e.g. www.google.com, no http, no path, just dns name
 	Serial.print("; port ");
 	Serial.println(thisPort);
-	Serial.println("*****************************************************************");
+	Serial.println(DEBUG_SEPARATOR);
+#endif
 
 	if (!client.connect(thisHost, thisPort)) {
+#ifdef HTML_DEBUG
 		Serial.println("connection failed");
+#endif
 		return 2;
 	}
 
+#ifdef HTML_DEBUG
 	Serial.println("Sending HTML: ");
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.println(sendHeader);
+	Serial.println(DEBUG_SEPARATOR);
+#endif
 
 
 	isOutOfMemory = (ESP.getFreeHeap() < ESP_MIN_HEAP); // we never want to read a header so big that it exceeds available memory
@@ -297,7 +306,8 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 
 	bool endOfHeader = false; // we'll keep track of where the html header ends, and where the payload begins
 	int thisLineCount = 0;
-	String line;
+	String line = "";
+	ResponseFirstLine = "";
 	while (countReadResponseAttempts > 0) {
 		// Read all the lines of the reply from server and print them to Serial
 		while (client.available()) {
@@ -311,6 +321,9 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 				client.flush();
 				client.stop();
 				return 5; // abort, we cannot load this content
+			}
+			if ((line != "") && (ResponseFirstLine == "")) {
+				ResponseFirstLine = line;
 			}
 
 			if (line.startsWith("Location: ")) {
@@ -355,7 +368,11 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 		delay(100); // give the OS a little breathing room when loading large documents
 	}
 	// END TIME SENSITIVE SECTION 
-
+#ifdef HTML_DEBUG
+#endif
+	Serial.println("");
+	Serial.print("First Response Line = ");
+	Serial.println(ResponseFirstLine);
 	Serial.print("Found Response Content Length = ");
 	Serial.println(ResponseContentLength);
 	Serial.print("Found Response Content Location = ");
@@ -375,18 +392,21 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	}
 
 
-	Serial.println("Response Header:");
+#ifdef HTML_DEBUG
 	Serial.println("");
+	Serial.println("Response Header:");
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.println(thisResponseHeader);
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.println("");
 	if (myDebugLevel >= 2) { // only show the response content for debug level 2 or greater
 		Serial.println("Response Payload Content:");
-		Serial.println("");
+		Serial.println(DEBUG_SEPARATOR);
 		Serial.println(thisResponse);
+		Serial.println(DEBUG_SEPARATOR);
 		Serial.println("");
 	}
 	//Serial.println("Page Title=" + htmlTagValue(thisResponse, "TITLE") );
-	Serial.println("");
 	Serial.println("");
 	Serial.print("Read done! Additional Read Responses:");
 	Serial.println(countReadResponseAttempts);
@@ -415,6 +435,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 
 	//Serial.print("my MAC = ");
 	//Serial.println(myMacAddressString());
+#endif
 
 	if (
 		(thisResponseHeader.indexOf("Location: http://1.1.1.1/") > 0) // anytime the 1.1.1.1 address is in the header, we are doing a redirect
@@ -490,7 +511,7 @@ int doAcceptTermsAndConditions() {
 	htmlString += String("GET ") + "/fs/customwebauth/custom.js" + " HTTP/1.1\r\n";
 	htmlString += "Host: " + String(accessHost) + "\r\n";
 	htmlString += "Accept-Language: en-US\r\n";
-	htmlString += String(wifiUserAgent) + "\r\n"; // "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko\r\n";
+	htmlString += String(WIFI_USER_AGENT) + "\r\n"; // "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko\r\n";
 	htmlString += "Connection: Keep-Alive\r\n\r\n";
 
 	htmlSend(accessHost, 80, htmlString);
@@ -534,6 +555,8 @@ int doAcceptTermsAndConditions() {
 	// Request += "Referer: http://" + String(accessHost) + "/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html&ap_mac=00:11:22:33:44:55&client_mac=cc:11:22:33:44:55&wlan=Visitor%20WiFi&redirect=" + String(internetHostCheck) + "\r\n";
 	Request += "Referer: " + ResponseLocation + "\r\n";
 
+#ifdef HTML_DEBUG
+#endif
 	Serial.println("Header so far:\n\r:");
 	Serial.println(Request);
 	Serial.println("\n\r\n\r\n\r");
@@ -617,10 +640,19 @@ int confirmedInternetConnectivity(const char* host) {
 																						//Serial.println(htmlString);
 
 	htmlString = htmlBasicHeaderText("GET", host, "/");
-	Serial.println("new htmlString:");
+#ifdef HTML_DEBUG
+	Serial.println("confirmedInternetConnectivity() - htmlString:");
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.println(htmlString);
+	Serial.println(DEBUG_SEPARATOR);
+#endif
 
+
+#ifdef USE_TLS_SSL
+	int connectionStatus = htmlSend(host, 443, htmlString);
+#else
 	int connectionStatus = htmlSend(host, 80, htmlString);
+#endif
 	if (connectionStatus == 0) {
 		Serial.println("Connected to internet!");
 	}
