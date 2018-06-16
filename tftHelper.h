@@ -27,10 +27,11 @@
 //#define TFT_CS 10
 //
 // For the esp shield, these are the default:
+#undef FOUND_BOARD
 #ifdef ARDUINO_ARCH_ESP8266
 	#define TFT_DC 2
 	#define TFT_CS 15
-	#define FOUND_BOARD=ESP8266
+	#define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32

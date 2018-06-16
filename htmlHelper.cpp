@@ -1,3 +1,4 @@
+#include "GlobalDefine.h"
 #include "htmlHelper.h"
 
 //#if BOARD == ESP8266
@@ -39,11 +40,6 @@
 //
 //  <HTML><HEAD><TITLE> Web Authentication Redirect</TITLE><META http-equiv="Cache-control" content="no-cache"><META http-equiv="Pragma" content="no-cache"><META http-equiv="Expires" content="-1"><META http-equiv="refresh" content="1; URL=http://1.1.1.1/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.htmlap_mac=00:11:22:33:44:55&client_mac=11:22:33:44:55:66&wlan=My%20Visitor%20WiFi&redirect=www.google.com/"></HEAD></HTML>
 
-#ifdef USE_TLS_SSL
-WiFiClient client; // TODO WiFiClientSecure
-#else
-WiFiClient client;
-#endif
 
 // Use WiFiClient class to create TCP connections
 const int myDebugLevel = 3; // 3 is maximum verbose level
@@ -129,7 +125,7 @@ String htmlBasicHeaderText(String verb, const char* targetHost, String targetUrl
 	return verb + " http://" + String(targetHost) + targetUrl + " HTTP/1.1\r\n" +
 		"Host: " + String(targetHost) + "\r\n" +
 		"Content-Encoding: identity" + "\r\n" +
-		"Connection: Keep-Alive\r\n\r\n";
+		"Connection: keep-alive\r\n\r\n";
 }
 
 
@@ -243,6 +239,8 @@ uint ResponseContentLength = -1;
 //**************************************************************************************************************
 //  htmlSend - send thisHeader to targetHost:targetPort
 //
+//  Note we instantiate our own WiFiClient (or WiFiClientSecure) here.
+//
 //  return codes:   0 success
 //                  1 success, but with redirect
 //                  2 failed to connect
@@ -251,11 +249,17 @@ uint ResponseContentLength = -1;
 //                  5 content too large to load (would be out of memory if content attempted to load)
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
+#ifdef USE_TLS_SSL
+	WiFiClient client;
+//	WiFiClientSecure client; // TODO WiFiClientSecure
+#else
+	WiFiClient client;
+#endif
 	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
 	String thisResponse; thisResponse = "";
 	String thisResponseHeader; thisResponseHeader = "";
 
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
 	Serial.println(DEBUG_SEPARATOR);
 	Serial.print("Connecting to ");
 	Serial.print(thisHost); // e.g. www.google.com, no http, no path, just dns name
@@ -265,13 +269,13 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 #endif
 
 	if (!client.connect(thisHost, thisPort)) {
-#ifdef HTML_DEBUG
-		Serial.println("connection failed");
+#ifdef HTTP_DEBUG
+		Serial.println("htmlSend connection failed");
 #endif
 		return 2;
 	}
 
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
 	Serial.println("Sending HTML: ");
 	Serial.println(DEBUG_SEPARATOR);
 	Serial.println(sendHeader);
@@ -368,7 +372,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 		delay(100); // give the OS a little breathing room when loading large documents
 	}
 	// END TIME SENSITIVE SECTION 
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
 #endif
 	Serial.println("");
 	Serial.print("First Response Line = ");
@@ -392,7 +396,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	}
 
 
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
 	Serial.println("");
 	Serial.println("Response Header:");
 	Serial.println(DEBUG_SEPARATOR);
@@ -448,13 +452,14 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	else {
 		return 0; // success! Internet access ready.
 	}
-#ifdef ARDUINO_ARCH_ESP8266
-	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
-#endif
 
-#ifdef ARDUINO_ARCH_ESP32
-	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
-#endif
+//#ifdef ARDUINO_ARCH_ESP8266
+//	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+//#endif
+//
+//#ifdef ARDUINO_ARCH_ESP32
+//	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+//#endif
 
 }
 
@@ -555,7 +560,7 @@ int doAcceptTermsAndConditions() {
 	// Request += "Referer: http://" + String(accessHost) + "/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html&ap_mac=00:11:22:33:44:55&client_mac=cc:11:22:33:44:55&wlan=Visitor%20WiFi&redirect=" + String(internetHostCheck) + "\r\n";
 	Request += "Referer: " + ResponseLocation + "\r\n";
 
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
 #endif
 	Serial.println("Header so far:\n\r:");
 	Serial.println(Request);
@@ -640,7 +645,9 @@ int confirmedInternetConnectivity(const char* host) {
 																						//Serial.println(htmlString);
 
 	htmlString = htmlBasicHeaderText("GET", host, "/");
-#ifdef HTML_DEBUG
+#ifdef HTTP_DEBUG
+	Serial.println("");
+	Serial.println(DEBUG_SEPARATOR);
 	Serial.println("confirmedInternetConnectivity() - htmlString:");
 	Serial.println(DEBUG_SEPARATOR);
 	Serial.println(htmlString);
@@ -679,4 +686,5 @@ int confirmedInternetConnectivity(const char* host) {
 		return 1;
 	}
 	return 0;
+	Serial.println("confirmedInternetConnectivity - success!");
 };

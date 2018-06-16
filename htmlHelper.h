@@ -5,20 +5,21 @@
 
 #include "GlobalDefine.h"
 
+#undef FOUND_BOARD
 #ifdef ARDUINO_ARCH_ESP8266
-#  include <ESP8266HTTPClient.h>
-#  include <ESP8266WiFi.h>
-#  define FOUND_BOARD=ESP8266
+	#include <ESP8266HTTPClient.h>
+	#include <ESP8266WiFi.h>
+	#define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-#  include <HTTPClient.h>
-#  include <WiFi.h>
-#  define FOUND_BOARD=ESP32
+	#include <HTTPClient.h>
+	#include <WiFi.h>
+	#define FOUND_BOARD ESP32
 #endif
 
 #ifndef FOUND_BOARD
-#pragma message(Reminder "Error Target hardware not defined !")
+	#pragma message(Reminder "Error Target hardware not defined !")
 #endif // ! FOUND_BOARD
 
 
@@ -50,6 +51,7 @@ String htmlBasicHeaderText(String verb, const char* host, String);
 
 // int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort);
 // int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader);
+
 
 int htmlSend(const char* thisHost, int thisPort, String sendHeader);
 

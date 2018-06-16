@@ -39,7 +39,7 @@ In Arduino IDE: Tools - Board - Board Manager.
   Install package: ESP8266 by ESP8266 Community 
 
 In Visual Studio, vMicro - Board - NodeMCU 0.9
-(may need to Visual Studio Menu: vMicro - General - Rescan Toolchains and Librarie)
+(may need to Visual Studio Menu: vMicro - General - Rescan Toolchains and Libraries)
   
 
 Libraries needed (and how to install them):
@@ -58,7 +58,7 @@ Also needed (installed typically in Arduino IDE menu Sketch > Include Library > 
 
   Adafruit ILI9341 display library (1.0.2 original; 1.0.11 confirmed still working)
 
-  Adafruit GFX Library (1.1.5 original; 1.2.2 confirmed still working)
+  Adafruit GFX Library (1.1.5 original; 1.2.3 confirmed still working)
 
 When updating libraries, don't forget: Visual Studio Menu: vMicro - General - Rescan Toolchains and Libraries
 

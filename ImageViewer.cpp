@@ -777,11 +777,11 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 			int thisBytesAvailable = stream->available();
 			Serial.print("thisBytesAvailable = ");
 			Serial.print(thisBytesAvailable);
-			int thisResult = 0;
+			uint32_t thisResult = 0;
 			Serial.println("Step 2");
 			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
 			thisResult = stream->read(pImageBMP, thisBytesAvailable);
-			int i = thisResult;
+			uint32_t i = thisResult;
 			Serial.print("Initial Read = ");
 			Serial.println(i);
 

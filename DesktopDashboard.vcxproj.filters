@@ -18,7 +18,6 @@
     <None Include="DesktopDashboard.ino" />
     <None Include="doc\adafruit-gfx-graphics-library.pdf" />
     <None Include="doc\ILI9341.pdf" />
-    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FreeSansBold24pt7b.h">
@@ -43,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WiFiHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="__vm\.DesktopDashboard.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

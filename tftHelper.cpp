@@ -1,6 +1,7 @@
 // 
 // 
 // 
+#include "GlobalDefine.h"
 
 #include "tftHelper.h"
 
@@ -39,10 +40,9 @@ void tftPrintlnCentered(String text) {
 							  //Serial.println();
 	tft.setCursor(newX, newY);
 	tft.println(text);
-#ifdef SERIAL_SCREEN_DEBUG
-	Serial.print("Centered text:");
-	Serial.println(text);
-#endif
+	SCREEN_DATA_DEBUG_PRINT("Centered text:");
+	SCREEN_DATA_DEBUG_PRINTLN(text);
+
 	//Serial.print("Heap=");
 	//Serial.println(ESP.getFreeHeap());
 }
@@ -51,14 +51,22 @@ void tftPrintlnCentered(String text) {
 // 
 //*******************************************************************************************************************************************
 void tftScreenClear() {
+	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+	if ((x != 0x9C) && (x != 0x94)) {
+		SCREEN_DEBUG_PRINTLN("Warning! ILI9341_RDMODE != 0x9C; Reinitializing...");
+		//tft.endWrite();
+		//tft.clearWriteError();
+		//tft.begin();
+		x = tft.readcommand8(ILI9341_RDMODE);
+		SCREEN_DEBUG_PRINT("New ILI9341_RDMODE = ");
+		SCREEN_DEBUG_PRINTLN(x);
+	}
 	tft.setCursor(0, 0);
 	tft.fillScreen(ILI9341_BLACK);
 	// tft.drawRect(0, 0, 240, 320, 0x00FF);
 	// tft.drawRect(0, 0, 320, 240, 0x00FF);
 	yield();
-#ifdef SERIAL_SCREEN_DEBUG
-	Serial.println("Screen clear\n\r");
-#endif
+	// SCREEN_DEBUG_PRINTLN("Screen clear\n\r");
 }
 
 

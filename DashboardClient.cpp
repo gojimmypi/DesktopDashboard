@@ -103,8 +103,9 @@ void DashboardClient::value(String value) {
 		//DashboardItemArray.push_back(thisDashboardID);
 		itemCount++;
 		if (thisItem->next == NULL) {
-			//Serial.print("Creating item ");
-			//Serial.println(itemCount);
+			Serial.print("Creating item ");
+			Serial.println(itemCount);
+			Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
 			nextItem = new DashboardItem;
 			thisItem->next = nextItem;
 		}
