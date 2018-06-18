@@ -43,8 +43,8 @@ void tftPrintlnCentered(String text) {
 	SCREEN_DATA_DEBUG_PRINT("Centered text:");
 	SCREEN_DATA_DEBUG_PRINTLN(text);
 
-	//Serial.print("Heap=");
-	//Serial.println(ESP.getFreeHeap());
+	//HEAP_DEBUG_PRINT("Heap=");
+	//HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 }
 
 //*******************************************************************************************************************************************

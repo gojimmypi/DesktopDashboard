@@ -289,7 +289,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	}
 	else {
 		Serial.print("Memory free heap: ");
-		Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	}
 
 	// BEGIN TIME SENSITIVE SECTION (edit with care, don't waste CPU, yield to OS!)
@@ -356,7 +356,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 				Serial.print("!");
 				thisResponse += CrLf + "Out of memory! " + CrLf;
 				Serial.print("Out of memory! Heap=");
-				Serial.println(ESP.getFreeHeap());
+				HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 				isOutOfMemory = true;
 				client.flush();
 				return 4;

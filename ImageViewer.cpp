@@ -4,7 +4,7 @@
 // 
 
 #include "ImageViewer.h"
-
+#include "GlobalDefine.h"
 
 
 
@@ -451,13 +451,13 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
-			Serial.printf("Initial heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("Initial heap size: %u\n", ESP.getFreeHeap());
 
 			unsigned long DrawTime = millis();
 			// get length of document (is -1 when Server sends no Content-Length header)
 			len = http.getSize(); // TODO - this is no longer needed locally
 //			unsigned char tmp;
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("settings heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 
@@ -477,7 +477,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 //			Serial.print("thisBytesAvailable = ");
 //			Serial.print(thisBytesAvailable);
 //			Serial.println("Step 2");
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("settings heap size: %u\n", ESP.getFreeHeap());
 
 //			totalBytesRead = stream->read(data, thisBytesAvailable);
 			Serial.print("Initial Read = ");
@@ -736,7 +736,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 		// HTTP header has been sent and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("settings heap size: %u\n", ESP.getFreeHeap());
 
 			//unsigned long DrawTime = millis();
 			// get lenght of document (is -1 when Server sends no Content-Length header)
@@ -764,7 +764,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 				return;
 			}
 			//unsigned char tmp;
-			Serial.printf("After allocation heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("After allocation heap size: %u\n", ESP.getFreeHeap());
 			Serial.print("  length = ");
 			Serial.println(len);
 
@@ -779,7 +779,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 			Serial.print(thisBytesAvailable);
 			uint32_t thisResult = 0;
 			Serial.println("Step 2");
-			Serial.printf("settings heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("settings heap size: %u\n", ESP.getFreeHeap());
 			thisResult = stream->read(pImageBMP, thisBytesAvailable);
 			uint32_t i = thisResult;
 			Serial.print("Initial Read = ");

@@ -2,7 +2,7 @@
 // 
 // 
 #include "DashboardClient.h"
-
+#include "GlobalDefine.h"
 
 DashboardClient::DashboardClient() {
 
@@ -105,7 +105,7 @@ void DashboardClient::value(String value) {
 		if (thisItem->next == NULL) {
 			Serial.print("Creating item ");
 			Serial.println(itemCount);
-			Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+			HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 			nextItem = new DashboardItem;
 			thisItem->next = nextItem;
 		}

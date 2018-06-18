@@ -39,7 +39,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 
 #define USE_TLS_SSL // when defined, JSON data will use SSL
-#define SCREEN_DEBUG // when defined, display low level screen debug info 
+// #define SCREEN_DEBUG // when defined, display low level screen debug info 
 // #define SCREEN_DATA_DEBUG // when defined, print screen data also to serial terminal
 #define JSON_DEBUG // when defined, display JSON debug info 
 #define WIFI_DEBUG // when defined, display WiFi debug info 
@@ -47,6 +47,8 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define HTTP_DEBUG // when defined, display WiFi debug info 
 #define DEBUG_SEPARATOR "***********************************"
 #define TIMER_DEBUG // when defined, display diagnostic timer info
+#define HEAP_DEBUG
+#define HARDWARE_DEBUG
 
 // Statements like:
 // #pragma message(Reminder "Fix this problem!")
@@ -85,7 +87,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #ifndef SCREEN_DEBUG
 #define SCREEN_DEBUG_PRINT(string)         ((void)0)
-#define SCREEN_DEBUG_PRINTLN               ((void)0)
+#define SCREEN_DEBUG_PRINTLN(string)       ((void)0)
 #endif
 
 //********************************************************
@@ -107,7 +109,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #ifndef JSON_DEBUG
 #define JSON_DEBUG_PRINT(string)           ((void)0)
-#define JSON_DEBUG_PRINTLN                 ((void)0)
+#define JSON_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
 //********************************************************
@@ -118,11 +120,22 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #ifndef TIMER_DEBUG
 #define TIMER_DEBUG_PRINT(string)           ((void)0)
-#define TIMER_DEBUG_PRINTLN                 ((void)0)
+#define TIMER_DEBUG_PRINTLN(string)         ((void)0)
+#endif
+
+//********************************************************
+#ifdef HEAP_DEBUG
+#define HEAP_DEBUG_PRINT(string)           (Serial.print(string))
+#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf(string,uint32_t))
+#define HEAP_DEBUG_PRINTLN(string)         (Serial.println(string))
+#endif
+
+#ifndef HEAP_DEBUG
+#define HEAP_DEBUG_PRINT(string)           ((void)0)
+#define HEAP_DEBUG_PRINTF(string)          ((void)0)
+#define HEAP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
 
-
-
-#endif
+#endif // _GLOBALDEFINE_h
 

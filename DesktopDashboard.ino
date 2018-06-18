@@ -15,8 +15,10 @@
 // Target display is like the Adafruit ILI9341 http://www.adafruit.com/products/1651
 //
 //***************************************************
-#include "GlobalDefine.h"
+#include "FS.h"
 
+#include "GlobalDefine.h"
+#include "hardwareHelper.h"
 #include "DashboardClient.h"
 #include "htmlHelper.h"
 
@@ -41,9 +43,9 @@ htmlHelper myHtmlHelper;
 // include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 // include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
 
-#ifdef FOUND_BOARD
-	#undef FOUND_BOARD
-#endif
+#pragma region BOARD_DETECT
+
+#undef FOUND_BOARD
 
 #ifdef ARDUINO_ARCH_ESP8266
   #include <ESP8266HTTPClient.h>
@@ -60,6 +62,8 @@ htmlHelper myHtmlHelper;
 #ifndef FOUND_BOARD
 #pragma message(Reminder "Error Target hardware not defined !")
 #endif // ! FOUND_BOARD
+
+#pragma endregion
 
 
 //
@@ -190,7 +194,7 @@ void UpdateDashboard() {
 	//tft.println("Refreshing...");
 
 	parser.setListener(&listener); // init our JSON listener
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 
 //#ifdef USE_TLS_SSL
 //	WiFiClientSecure client;
@@ -345,6 +349,7 @@ void fetchDashboardDataChar(WiFiClient * client, JsonStreamingParser * parser) {
 		}
 		if (isBody) {
 			parser->parse(c);
+			HEAP_DEBUG_PRINTF("Initial heap size: %u\n", ESP.getFreeHeap());
 			yield();
 		}
 	}
@@ -386,7 +391,7 @@ bool readyDashboardDataRefresh() {
 
 void GetDashboardData() {
 	if (!fetchingData && !fetchWaiting && readyDashboardDataRefresh()){
-		Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 		Serial.print("&parser =");
 		Serial.println((long)&parser);
 
@@ -402,8 +407,8 @@ void GetDashboardData() {
 		Serial.println((long)&parser);
 
 		parser.setListener(&listener); // init our JSON listener
-		Serial.print("Heap=");
-		Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Heap=");
+		HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 
 		//String httpPayload2 = String("GET ") + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		//	"Host: " + DASHBOARD_HOST + "\r\n" +
@@ -418,7 +423,7 @@ void GetDashboardData() {
 		String httpPayload = htmlBasicHeaderText("GET", DASHBOARD_HOST, DASHBOARD_PATH + DasboardDataFile);
 #ifdef JSON_DEBUG
 		Serial.println();
-		Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 		Serial.println("JSON fetch httpPayload:");
 		Serial.println(DEBUG_SEPARATOR);
 		Serial.println(httpPayload);
@@ -440,11 +445,11 @@ void GetDashboardData() {
 			Serial.println("GetDashboardData TLS certificate doesn't match");
 		}
 
-		Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 		client.print(httpPayload);
 		Serial.println("request sent"); // delay needed here?
 
-		Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 		Serial.println("Reading Headers...");
 		Serial.println(DEBUG_SEPARATOR);
 
@@ -622,7 +627,7 @@ void GetDasboardDataFile() {
 
 void testSSL() {
 	Serial.println("TestSSL");
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	const char* host = "api.github.com";
 	const int httpsPort = 443;
 	// Use web browser to view and copy
@@ -644,7 +649,7 @@ void testSSL() {
 	}
 
 
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	if (client.verify(fingerprint, host)) {
 		Serial.println("TLS certificate matches");
 	}
@@ -652,7 +657,7 @@ void testSSL() {
 		Serial.println("TLS certificate doesn't match");
 	}
 
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	String url = "/repos/esp8266/Arduino/commits/master/status";
 	Serial.print("requesting URL: ");
 	Serial.println(url);
@@ -670,7 +675,7 @@ void testSSL() {
 	client.print(tlsHTML);
 
 	Serial.println("request sent");
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	while (client.connected()) {
 		String line = client.readStringUntil('\n');
 		if (line == "\r") {
@@ -690,28 +695,73 @@ void testSSL() {
 	Serial.println(line);
 	Serial.println("==========");
 	Serial.println("closing connection");
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	line = "";
 	// client.stop(); // don't stop the local client here, as other instances will not be able to reconnect (TODO - have exactly one WiFiClientSecure client;)
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	Serial.println("Flush...");
 	client.flush();
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	Serial.println("Stop...");
 	client.stop();
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 }
 
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
 void setup() {
-	delay(5000);
+	delay(500);
 	Serial.begin(115200);
 	Serial.println("ILI9341 Test!");
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
 
+	checkFlash();
 
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+
+	SPIFFS.begin();
+	// SPIFFS.format();
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+	File f = SPIFFS.open("/myFile.txt", "w");
+	if (!f) {
+		Serial.println("file open failed 1");
+		SPIFFS.format();
+	}
+	else {
+		Serial.println("file open SUCCESS 1");
+	}
+	f.close();
+
+	f = SPIFFS.open("/myFile.txt", "w");
+	if (!f) {
+		Serial.println("file open failed 1.1");
+	}
+	else {
+		Serial.println("file open SUCCESS 1.1");
+		f.println("Hello World!");
+	}
+	f.close();
+
+	Dir dir = SPIFFS.openDir("/");
+	while (dir.next()) {
+		Serial.print(dir.fileName());
+		File f = dir.openFile("r");
+		Serial.println(f.size());
+	}
+	String fmsg;
+	 f = SPIFFS.open("/myFile.txt", "r");
+	if (!f) {
+		Serial.println("file open failed 2");
+	}
+	else {
+		Serial.println("file open SUCCESS 2");
+		fmsg = f.readString();
+	}
+	Serial.println("msg=");
+	Serial.println(fmsg);
+	f.close();
+	Serial.println("File test done!");
+	SPIFFS.end();
 
 	//char json[] = "{\"a\":3, \"b\":{\"c\":\"d\"}}";
 	//for (int i = 0; i < sizeof(json); i++) {
@@ -793,7 +843,7 @@ void setup() {
 	UpdateDashboard();
 
 	Serial.println(F("Setup Done!"));
-	Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 	// #pragma message(Reminder "Fix this problem!")
 }
 
@@ -964,7 +1014,7 @@ void UpdateDashboardDisplay() {
 			tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
 			tftPrintlnCentered(textItem);//		tft.println(textItem);
 			timeoutDisplayItem = millis();
-			Serial.print("Heap="); Serial.println(ESP.getFreeHeap());
+			HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 		}
 	}
 	else {
