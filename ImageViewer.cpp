@@ -451,7 +451,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 		// HTTP header has been send and Server response header has been handled
 		// file found at server
 		if (httpCode == HTTP_CODE_OK) {
-			HEAP_DEBUG_PRINTF("Initial heap size: %u\n", ESP.getFreeHeap());
+			HEAP_DEBUG_PRINTF("ImageViewer Initial heap size: %u\n", ESP.getFreeHeap());
 
 			unsigned long DrawTime = millis();
 			// get length of document (is -1 when Server sends no Content-Length header)
