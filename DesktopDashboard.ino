@@ -23,7 +23,7 @@
 #include "htmlHelper.h"
 
 String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
-htmlHelper myHtmlHelper;
+// htmlHelper myHtmlHelper;
 
 
 
@@ -82,6 +82,9 @@ htmlHelper myHtmlHelper;
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
 #include "FreeSansBold24pt7b.h"  // Adafruit_ILI9341.h is needed; copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
+
+#include "sslHelper.h"
+
 #include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
 #include "JsonListener.h"
 
@@ -106,7 +109,8 @@ String myMacAddress;
 JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
 
 #ifdef USE_TLS_SSL
-WiFiClientSecure client;
+THE_SSL_TYPE  client;
+//WiFiClientSecure client;
 const int httpPort = 443;
 // Serial.println("Using WiFiClientSecure!");
 #else
@@ -116,199 +120,200 @@ const int httpPort = 80;
 
 
 
-#ifdef USE_TLS_SSL
-void fetchDashboardData(WiFiClientSecure * client, JsonStreamingParser * parser) {
-	Serial.println("Using WiFiClientSecure!");
-#else
-void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
-#endif
-	parser->reset();
-	boolean isBody = false;
-	char c;
-	String msg = "";
-	int size = 0;
-	client->setNoDelay(false);
-#ifdef JSON_DEBUG
-	int sizePreview = 120000; // number of chars of JSON preview, as we don't usually need to see the whole file
-	Serial.print("Showing first ");
-	Serial.println(sizePreview);
-	Serial.println(" bytes of JSON Data:");
-#endif // JSON_DEBUG
-
-	//while (client->connected()) {
-		while ((size = client->available()) > 0) {
-			c = client->read();
-			if (!isBody) {
-				msg += c;
-			}
-#ifdef JSON_DEBUG
-			sizePreview--;
-			if (sizePreview >= 0) {
-				Serial.print(c); // we read JSON data one char at a time.... but only display the first [sizePreview] bytes
-			}
-#endif // JSON_DEBUG
-
-			if (c == '{' || c == '[') {
-				isBody = true;
-			}
-			if (isBody) {
-				parser->parse(c);
-				yield();
-			}
-		}
-	//}
-
-#ifdef JSON_DEBUG
-	Serial.println("Done parsing data!\r\n\r\n");
-	Serial.println("Message");
-	Serial.println(msg);
-
-#endif // JSON_DEBUG
-
-
-#ifdef ARDUINO_ARCH_ESP8266
-	client->stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
-#endif
-
-#ifdef ARDUINO_ARCH_ESP32
-	client->stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
-#endif
-
-	parser->setListener(NULL); // cleanup the parser
-
-}
-
-//*******************************************************************************************************************************************
-// UpdateDashboard
-//*******************************************************************************************************************************************
-void UpdateDashboard() {
-	tftScreenClear();
-	tftPrintlnCentered("Refreshing...");
-
-	//tft.setRotation(3);
-	//tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-
-	//tftScreenClear();
-	//tft.setCursor(0, 36);
-	//tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	//tft.println("Refreshing...");
-
-	parser.setListener(&listener); // init our JSON listener
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
 
 //#ifdef USE_TLS_SSL
-//	WiFiClientSecure client;
-//	const int httpPort = 443;
+//void fetchDashboardData(THE_SSL_TYPE * client, JsonStreamingParser * parser) {
 //	Serial.println("Using WiFiClientSecure!");
 //#else
-//	WiFiClient client;
-//	const int httpPort = 80;
+//void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
 //#endif
+//	parser->reset();
+//	boolean isBody = false;
+//	char c;
+//	String msg = "";
+//	int size = 0;
+//	client->setNoDelay(false);
+//#ifdef JSON_DEBUG
+//	int sizePreview = 0; // number of chars of JSON preview, as we don't usually need to see the whole file
+//	Serial.print("Showing first ");
+//	Serial.println(sizePreview);
+//	Serial.println(" bytes of JSON Data:");
+//#endif // JSON_DEBUG
+//
+//	//while (client->connected()) {
+//		while ((size = client->available()) > 0) {
+//			c = client->read();
+//			if (!isBody) {
+//				msg += c;
+//			}
+//#ifdef JSON_DEBUG
+//			sizePreview--;
+//			if (sizePreview >= 0) {
+//				Serial.print(c); // we read JSON data one char at a time.... but only display the first [sizePreview] bytes
+//			}
+//#endif // JSON_DEBUG
+//
+//			if (c == '{' || c == '[') {
+//				isBody = true;
+//			}
+//			if (isBody) {
+//				parser->parse(c);
+//				yield();
+//			}
+//		}
+//	//}
+//
+//#ifdef JSON_DEBUG
+//	Serial.println("Done parsing data!\r\n\r\n");
+//	Serial.println("Message");
+//	Serial.println(msg);
+//
+//#endif // JSON_DEBUG
+//
+//
+//#ifdef ARDUINO_ARCH_ESP8266
+//	client->stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+//#endif
+//
+//#ifdef ARDUINO_ARCH_ESP32
+//	client->stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+//#endif
+//
+//	parser->setListener(NULL); // cleanup the parser
+//
+//}
 
-	String httpPayload2 = String("GET ") + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
-		"Host: " + DASHBOARD_HOST + "\r\n" +
-	    String(WIFI_USER_AGENT) + "\r\n" + // see myPrivbateSettings, typical value: "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko\r\n";
-	    "Connection: Keep-Alive\r\n\r\n";
-
-	Serial.println("JSON fetch httpPayload2:");
-	Serial.println(DEBUG_SEPARATOR);
-	Serial.println(httpPayload2);
-	Serial.println(DEBUG_SEPARATOR);
-
-	String httpPayload = htmlBasicHeaderText("GET", DASHBOARD_HOST, DASHBOARD_PATH + DasboardDataFile);
-#ifdef JSON_DEBUG
-	Serial.println();
-	Serial.println("JSON fetch httpPayload:");
-	Serial.println(DEBUG_SEPARATOR);
-	Serial.println(httpPayload);
-	Serial.println(DEBUG_SEPARATOR);
-#endif
-
-
-	if (!client.connect(DASHBOARD_HOST, httpPort)) {
-		Serial.println("connection failed");
-		Serial.println("");
-	}
-
-	if (client.verify(DASHBOARD_HOST_THUMBPRINT, DASHBOARD_HOST)) {
-		Serial.println("TLS certificate matches");
-	}
-	else {
-		Serial.println("TLS certificate doesn't match");
-	}
-
-	client.print(httpPayload);
-	Serial.println("request sent"); // delay needed here?
-
-	Serial.println("Reading Headers...");
-	Serial.println(DEBUG_SEPARATOR);
-
-	String line = "";
-	unsigned long timeout = millis();
-
-	timeout = millis();
-	while (client.connected()) {
-		while (client.available() == 0) {
-			yield();
-			if (millis() - timeout > 10000) {
-				Serial.println(">>> Client Timeout !");
-				client.stop();
-				return;
-			}
-		}
-		if (client.available()) {
-			yield();
-			timeout = millis();
-			line = client.readStringUntil('\n');
-			Serial.println(line);
-			if (line == "\r") {
-				Serial.println("headers received!");
-				Serial.println(DEBUG_SEPARATOR);
-				break;
-			}
-		}
-		//else {
-		//	Serial.print("No data available; status = ");
-		//	Serial.println(client.status());
-		//	Serial.println(DEBUG_SEPARATOR);
-		//	Serial.println("waiting 60 seconds...");
-		//	delay(60000);
-		//	return;
-		//}
-		yield();
-	}
-
-
-	int retryCounter = 0;
-	// see http://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/client-examples.html
-	
-	Serial.print("\r\n\r\nProceeding! client.status = ");
-
-#ifdef ARDUINO_ARCH_ESP8266
-	Serial.print(client.status()); // (only ESP8266 seems to have implemented (client.status)
-#endif
-
-#ifdef ARDUINO_ARCH_ESP32
-	Serial.print("client.status() not available for ESP32"); // flush client (the ESP32 does not seem to have implemented client.status)
-#endif	
-
-	fetchDashboardData(&client, &parser);
-
-	tft.setRotation(3);
-	tft.fillScreen(ILI9341_BLACK);
-	unsigned long start = micros();
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-
-
-
-#ifdef ARDUINO_ARCH_ESP8266
-	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
-#endif
-
-#ifdef ARDUINO_ARCH_ESP32
-	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
-#endif
-}
+//*******************************************************************************************************************************************
+// UpdateDashboard (deprecated)
+//*******************************************************************************************************************************************
+//void UpdateDashboard() {
+//	tftScreenClear();
+//	tftPrintlnCentered("Refreshing...");
+//
+//	//tft.setRotation(3);
+//	//tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+//
+//	//tftScreenClear();
+//	//tft.setCursor(0, 36);
+//	//tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+//	//tft.println("Refreshing...");
+//
+//	parser.setListener(&listener); // init our JSON listener
+//	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+//
+////#ifdef USE_TLS_SSL
+////	WiFiClientSecure client;
+////	const int httpPort = 443;
+////	Serial.println("Using WiFiClientSecure!");
+////#else
+////	WiFiClient client;
+////	const int httpPort = 80;
+////#endif
+//	Serial.println("UpdateDashboard for file =" + DasboardDataFile);
+//	String httpPayload2 = String("GET ") + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
+//		"Host: " + DASHBOARD_HOST + "\r\n" +
+//	    String(WIFI_USER_AGENT) + "\r\n" + // see myPrivbateSettings, typical value: "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko\r\n";
+//	    "Connection: Close\r\n\r\n";
+//
+//	Serial.println("JSON fetch httpPayload2:");
+//	Serial.println(DEBUG_SEPARATOR);
+//	Serial.println(httpPayload2);
+//	Serial.println(DEBUG_SEPARATOR);
+//
+//	String httpPayload = htmlBasicHeaderText("GET", DASHBOARD_HOST, DASHBOARD_PATH + DasboardDataFile);
+//#ifdef JSON_DEBUG
+//	Serial.println();
+//	Serial.println("JSON fetch httpPayload:");
+//	Serial.println(DEBUG_SEPARATOR);
+//	Serial.println(httpPayload);
+//	Serial.println(DEBUG_SEPARATOR);
+//#endif
+//
+//
+//	if (!client.connect(DASHBOARD_HOST, httpPort)) {
+//		Serial.println("connection failed");
+//		Serial.println("");
+//	}
+//
+//	if (client.verify(DASHBOARD_HOST_THUMBPRINT, DASHBOARD_HOST)) {
+//		Serial.println("TLS certificate matches");
+//	}
+//	else {
+//		Serial.println("TLS certificate doesn't match");
+//	}
+//
+//	client.print(httpPayload);
+//	Serial.println("request sent"); // delay needed here?
+//
+//	Serial.println("Reading Headers...");
+//	Serial.println(DEBUG_SEPARATOR);
+//
+//	String line = "";
+//	unsigned long timeout = millis();
+//
+//	timeout = millis();
+//	while (client.connected()) {
+//		while (client.available() == 0) {
+//			yield();
+//			if (millis() - timeout > 10000) {
+//				Serial.println(">>> Client Timeout !");
+//				client.stop();
+//				return;
+//			}
+//		}
+//		if (client.available()) {
+//			yield();
+//			timeout = millis();
+//			line = client.readStringUntil('\n');
+//			Serial.println(line);
+//			if (line == "\r") {
+//				Serial.println("headers received!");
+//				Serial.println(DEBUG_SEPARATOR);
+//				break;
+//			}
+//		}
+//		//else {
+//		//	Serial.print("No data available; status = ");
+//		//	Serial.println(client.status());
+//		//	Serial.println(DEBUG_SEPARATOR);
+//		//	Serial.println("waiting 60 seconds...");
+//		//	delay(60000);
+//		//	return;
+//		//}
+//		yield();
+//	}
+//
+//
+//	int retryCounter = 0;
+//	// see http://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/client-examples.html
+//	
+//	Serial.print("\r\n\r\nProceeding! client.status = ");
+//
+//#ifdef ARDUINO_ARCH_ESP8266
+//	Serial.print(client.status()); // (only ESP8266 seems to have implemented (client.status)
+//#endif
+//
+//#ifdef ARDUINO_ARCH_ESP32
+//	Serial.print("client.status() not available for ESP32"); // flush client (the ESP32 does not seem to have implemented client.status)
+//#endif	
+//
+//	fetchDashboardData(&client, &parser);
+//
+//	tft.setRotation(3);
+//	tft.fillScreen(ILI9341_BLACK);
+//	unsigned long start = micros();
+//	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+//
+//
+//
+//#ifdef ARDUINO_ARCH_ESP8266
+//	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+//#endif
+//
+//#ifdef ARDUINO_ARCH_ESP32
+//	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+//#endif
+//}
 
 
 //*******************************************************************************************************************************************
@@ -320,15 +325,17 @@ String msg = "";
 int size = 0;
 
 
+//*******************************************************************************************************************************************
 #ifdef USE_TLS_SSL
-void fetchDashboardDataChar(WiFiClientSecure * client, JsonStreamingParser * parser) {
+void fetchDashboardDataChar(THE_SSL_TYPE * client, JsonStreamingParser * parser) {
 #else
 void fetchDashboardDataChar(WiFiClient * client, JsonStreamingParser * parser) {
 #endif
+//*******************************************************************************************************************************************
 	char c;
 	client->setNoDelay(false);
 #ifdef JSON_DEBUG
-	int sizePreview = 120000; // number of chars of JSON preview, as we don't usually need to see the whole file
+	int sizePreview = 0; // number of chars of JSON preview, as we don't usually need to see the whole file
 #endif // JSON_DEBUG
 
 	//while (client->connected()) {
@@ -349,7 +356,6 @@ void fetchDashboardDataChar(WiFiClient * client, JsonStreamingParser * parser) {
 		}
 		if (isBody) {
 			parser->parse(c);
-			HEAP_DEBUG_PRINTF("Initial heap size: %u\n", ESP.getFreeHeap());
 			yield();
 		}
 	}
@@ -373,25 +379,80 @@ void fetchDashboardDataChar(WiFiClient * client, JsonStreamingParser * parser) {
 	}
 }
 
-unsigned long timeoutDashboardDataRefresh = millis();
-unsigned long timerRefresh = millis();
-
+unsigned long timeoutDashboardDataRefresh = 0;
+unsigned long timerRefresh = 0;
+const int DATA_REFRESH_INTERVAL = 10000;
 bool fetchWaiting = false;
 
 bool readyDashboardDataRefresh() {
 #ifdef TIMER_DEBUG
 	if ((millis() - timerRefresh) > 1000) {
-		Serial.print("Ready in: ");
-		Serial.println(100000 - (millis() - timeoutDashboardDataRefresh));
+		// Serial.print("Ready in: ");
+		Serial.print((int)((DATA_REFRESH_INTERVAL - (millis() - timeoutDashboardDataRefresh)) / 1000));
+		Serial.print(".");
 		timerRefresh = millis();
 	}
 #endif
-	return ((millis() - timeoutDashboardDataRefresh) > 100000);
+	return ((millis() - timeoutDashboardDataRefresh) > DATA_REFRESH_INTERVAL);
+}
+
+void testParser() {
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	Serial.print("&parser =");
+	Serial.println((long)&parser);
+
+	JsonStreamingParser newParser;
+
+	Serial.print("&newParser =");
+	Serial.println((long)&newParser);
+
+
+	parser = newParser;
+	Serial.println("Assigned newParser");
+	Serial.print("&parser =");
+	Serial.println((long)&parser);
+
+	parser.setListener(&listener); // init our JSON listener
+	HEAP_DEBUG_PRINT("Heap=");
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+}
+
+struct tcp_pcb;
+extern struct tcp_pcb* tcp_tw_pcbs;
+extern "C" void tcp_abort(struct tcp_pcb* pcb);
+
+void tcpCleanup()
+{
+	while (tcp_tw_pcbs != NULL)
+	{
+		tcp_abort(tcp_tw_pcbs);
+	}
 }
 
 void GetDashboardData() {
+	HEAP_DEBUG_MSG = "GetDashboardData ";
+	if (!fetchingData && !fetchWaiting && !readyDashboardDataRefresh()) {
+		// HEAP_DEBUG_PRINT("Prestop ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+		client.stopAll();
+		yield();
+
+		// 
+		//  HEAP_DEBUG_PRINT("Stop ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+		// solution #1 assign new client object
+		tcpCleanup();
+
+		// client == NULL;
+		 //THE_SSL_TYPE newClient;
+		 //client = newClient;
+		 //client.setInsecure(); // TODO fix this. Needed for BearSSL
+		// HEAP_DEBUG_PRINT("Reassign ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
+		// solution #2 call tcpCleanup
+	    // tcpCleanup();
+	}
+
 	if (!fetchingData && !fetchWaiting && readyDashboardDataRefresh()){
-		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		Serial.print("&parser =");
 		Serial.println((long)&parser);
 
@@ -408,7 +469,7 @@ void GetDashboardData() {
 
 		parser.setListener(&listener); // init our JSON listener
 		HEAP_DEBUG_PRINT("Heap=");
-		HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 		//String httpPayload2 = String("GET ") + DASHBOARD_PATH + DasboardDataFile + " HTTP/1.1\r\n" +
 		//	"Host: " + DASHBOARD_HOST + "\r\n" +
@@ -423,14 +484,23 @@ void GetDashboardData() {
 		String httpPayload = htmlBasicHeaderText("GET", DASHBOARD_HOST, DASHBOARD_PATH + DasboardDataFile);
 #ifdef JSON_DEBUG
 		Serial.println();
-		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		Serial.println("JSON fetch httpPayload:");
 		Serial.println(DEBUG_SEPARATOR);
 		Serial.println(httpPayload);
 		Serial.println(DEBUG_SEPARATOR);
 #endif
 
-
+		Serial.println("calling client.connect...");
+		if (client == NULL) {
+			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+			Serial.println("creating new client...");
+			THE_SSL_TYPE newClient;
+			client = newClient;
+			client.setInsecure(); // TODO fix this. Needed for BearSSL
+			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+		}
+		delay(1000);
 		if (!client.connect(DASHBOARD_HOST, httpPort)) {
 			Serial.println("connection failed; need to implement wait clear");
 			Serial.println("");
@@ -445,11 +515,11 @@ void GetDashboardData() {
 			Serial.println("GetDashboardData TLS certificate doesn't match");
 		}
 
-		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		client.print(httpPayload);
 		Serial.println("request sent"); // delay needed here?
 
-		HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		Serial.println("Reading Headers...");
 		Serial.println(DEBUG_SEPARATOR);
 
@@ -458,23 +528,33 @@ void GetDashboardData() {
 
 		timeout = millis();
 		while (client.connected()) {
+			//HEAP_DEBUG_PRINT("1");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 			while (client.available() == 0) {
 				yield();
+				// HEAP_DEBUG_PRINT("2");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 				if (millis() - timeout > 10000) {
 					Serial.println(">>> GetDashboardData Client Timeout !");
 					client.stop();
+					HEAP_DEBUG_PRINT("3");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 					Serial.println("RE-Connecting to WiFi...");
 					wifiConnect(50);
+					HEAP_DEBUG_PRINT("4");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 					return;
 				}
 			}
+			//HEAP_DEBUG_PRINT("5");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 			if (client.available()) {
 				yield();
+				//HEAP_DEBUG_PRINT("6");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 				timeout = millis();
+				//HEAP_DEBUG_PRINT("7");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 				line = client.readStringUntil('\n');
+				//HEAP_DEBUG_PRINT("8");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 				Serial.println(line);
 				if (line == "\r") {
 					Serial.println("headers received!");
+					Serial.print(sizeof(line));
+					Serial.println(" bytes");
 					Serial.println(DEBUG_SEPARATOR);
 					break;
 				}
@@ -614,114 +694,28 @@ void showStartupImage() {
 // 
 // TODO - based on MAC address, determine data file name
 //*******************************************************************************************************************************************
-void GetDasboardDataFile() {
+void GetDashboardDataFile() {
 	// the files are expected to be static JSON, pre-generated by process at server (we don't want to wait on generation of files for display!)
 	DasboardDataFile =  String(DASHBOARD_KEY) + myMacAddress + ".json";
 	delay(2000);
+	HEAP_DEBUG_PRINT("Heap (before htmlExists) "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	if (!htmlExists(DasboardDataFile)) {
+		Serial.println(DasboardDataFile + " not found, using default");
 		DasboardDataFile = "2134.json";
 	}
+	HEAP_DEBUG_PRINT("Heap (after htmlExists) "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	screenMessage("Using file", "ID: " + DasboardDataFile);
 	// TODO - if the file does not exist, then use default.
 }
 
-void testSSL() {
-	Serial.println("TestSSL");
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	const char* host = "api.github.com";
-	const int httpsPort = 443;
-	// Use web browser to view and copy
-	// SHA1 fingerprint of the certificate
-	const char* fingerprint = "35 85 74 EF 67 35 A7 CE 40 69 50 F3 C0 F6 80 CF 80 3B 2E 19";
+#pragma region setup
 
-	Serial.println("WiFi connected");
-	Serial.println("IP address: ");
-	Serial.println(WiFi.localIP());
-
-	// Use WiFiClientSecure class to create TLS connection
-	// WiFiClientSecure client;
-	Serial.print("connecting to ");
-	Serial.println(host);
-	if (!client.connect(host, httpsPort)) {
-		Serial.println("TLS connection failed");
-		delay(10000);
-		return;
-	}
-
-
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	if (client.verify(fingerprint, host)) {
-		Serial.println("TLS certificate matches");
-	}
-	else {
-		Serial.println("TLS certificate doesn't match");
-	}
-
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	String url = "/repos/esp8266/Arduino/commits/master/status";
-	Serial.print("requesting URL: ");
-	Serial.println(url);
-	Serial.println(DEBUG_SEPARATOR);
-
-	String tlsHTML = String("GET ") + url + " HTTP/1.1\r\n" +
-		"Host: " + host + "\r\n" +
-		"User-Agent: BuildFailureDetectorESP8266\r\n" +
-		"Connection: close\r\n\r\n";
-	Serial.println("tlsHTML:");
-	Serial.println(DEBUG_SEPARATOR);
-	Serial.println(tlsHTML);
-	Serial.println(DEBUG_SEPARATOR);
-
-	client.print(tlsHTML);
-
-	Serial.println("request sent");
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	while (client.connected()) {
-		String line = client.readStringUntil('\n');
-		if (line == "\r") {
-			Serial.println("headers received");
-			break;
-		}
-	}
-	String line = client.readStringUntil('\n');
-	if (line.startsWith("{\"state\":\"success\"")) {
-		Serial.println("esp8266/Arduino CI successfull!");
-	}
-	else {
-		Serial.println("esp8266/Arduino CI has failed");
-	}
-	Serial.println("reply was:");
-	Serial.println("==========");
-	Serial.println(line);
-	Serial.println("==========");
-	Serial.println("closing connection");
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	line = "";
-	// client.stop(); // don't stop the local client here, as other instances will not be able to reconnect (TODO - have exactly one WiFiClientSecure client;)
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	Serial.println("Flush...");
-	client.flush();
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-	Serial.println("Stop...");
-	client.stop();
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-}
-
-//*******************************************************************************************************************************************
-// 
-//*******************************************************************************************************************************************
-void setup() {
-	delay(500);
-	Serial.begin(115200);
-	Serial.println("ILI9341 Test!");
-
-	checkFlash();
-
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-
+int setupSPIFFS() {
+	int okSPIFFS = 0;
+	HEAP_DEBUG_PRINT("Heap (before SPIFFS.begin) "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	SPIFFS.begin();
 	// SPIFFS.format();
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	File f = SPIFFS.open("/myFile.txt", "w");
 	if (!f) {
 		Serial.println("file open failed 1");
@@ -735,6 +729,7 @@ void setup() {
 	f = SPIFFS.open("/myFile.txt", "w");
 	if (!f) {
 		Serial.println("file open failed 1.1");
+		okSPIFFS = 1;
 	}
 	else {
 		Serial.println("file open SUCCESS 1.1");
@@ -749,12 +744,13 @@ void setup() {
 		Serial.println(f.size());
 	}
 	String fmsg;
-	 f = SPIFFS.open("/myFile.txt", "r");
+	f = SPIFFS.open("/myFile.txt", "r");
 	if (!f) {
 		Serial.println("file open failed 2");
 	}
 	else {
 		Serial.println("file open SUCCESS 2");
+		okSPIFFS = 2;
 		fmsg = f.readString();
 	}
 	Serial.println("msg=");
@@ -762,14 +758,12 @@ void setup() {
 	f.close();
 	Serial.println("File test done!");
 	SPIFFS.end();
+	HEAP_DEBUG_PRINT("Heap (after SPIFFS.end)="); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	return okSPIFFS;
+}
 
-	//char json[] = "{\"a\":3, \"b\":{\"c\":\"d\"}}";
-	//for (int i = 0; i < sizeof(json); i++) {
-	//	parser.parse(json[i]);
-	//}
-
-
-
+int setupDisplay() {
+	Serial.println("ILI9341 Test!");
 	tft.begin();
 	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
 	tftScreenDiagnostics();
@@ -783,68 +777,115 @@ void setup() {
 	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
 	delay(20);
 
-
-	screenMessage("Startup...");
 	tft.setCursor(1, 1);
-	//String urlLogo = String("GET http://") + 
-	//	             String(DASHBOARD_HOST) + 
-	//	             String(DASHBOARD_APP) + 
- //   				 "/imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
+	tftScreenDiagnostics();
+	screenMessage("Startup...");
+	return 0;
+}
 
-	//delay(20);
-	//tft.setRotation(2);
-	//tft.drawRect(0, 0, 240, 320, 0x00FF);
-	//delay(20);
+int setupWiFi() {
+	HEAP_DEBUG_MSG = "setupWiFi Heap = ";
+	HEAP_DEBUG_PRINTLN("Heap (setupWiFi begin)");
 
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	htmlSetClient(&client);
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
+	WIFI_DEBUG_PRINTLN("calling wifiConnect...");
 	wifiConnect(50);
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 	screenMessage("Connected to", WIFI_SSID);
 
-#ifdef WIFI_DEBUG
-	Serial.println("WiFi connected");
-	Serial.println("");
-	Serial.println(WiFi.localIP());
-#endif
-
+	WIFI_DEBUG_PRINTLN("WiFi connected. My IP address:");
+	WIFI_DEBUG_PRINTLN("");
+	WIFI_DEBUG_PRINTLN(WiFi.localIP());
 	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
 		Serial.println("Successfully connected!");
 	}
 
+	// testSSL();
+	HEAP_DEBUG_PRINT("Heap (setupWiFi end); "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	return 0;
+}
+#pragma endregion
 
-	testSSL();
-
-
-
-	//String htmlString = String("GET http://") + String(DASHBOARD_HOST) + "/" + " HTTP/1.1\r\n" +
-	//	"Host: " + String(DASHBOARD_HOST) + "\r\n" +
-	//	"Content-Encoding: identity" + "\r\n" +
-	//	"Connection: Keep-Alive\r\n\r\n";
-
-	//htmlSend(DASHBOARD_HOST, 80, htmlString); // test to confirm internet operational
-
-	GetDasboardDataFile();
-
-
-	//showStartupImage();
-
-	// 
-
-
-	//bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
-	//delay(2000);
+#pragma region OldStuff
+//char json[] = "{\"a\":3, \"b\":{\"c\":\"d\"}}";
+//for (int i = 0; i < sizeof(json); i++) {
+//	parser.parse(json[i]);
+//}
 
 
 
-	// Hello World!
+//String urlLogo = String("GET http://") + 
+//	             String(DASHBOARD_HOST) + 
+//	             String(DASHBOARD_APP) + 
+//   				 "/imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
+
+//delay(20);
+//tft.setRotation(2);
+//tft.drawRect(0, 0, 240, 320, 0x00FF);
+//delay(20);
+
+
+
+//String htmlString = String("GET http://") + String(DASHBOARD_HOST) + "/" + " HTTP/1.1\r\n" +
+//	"Host: " + String(DASHBOARD_HOST) + "\r\n" +
+//	"Content-Encoding: identity" + "\r\n" +
+//	"Connection: Keep-Alive\r\n\r\n";
+
+//htmlSend(DASHBOARD_HOST, 80, htmlString); // test to confirm internet operational
+//showStartupImage();
+
+// 
+
+
+//bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/image/24bit.bmp");
+//delay(2000);
+
+
+
+// Hello World!
+
+
+#pragma endregion
+
+
+//*******************************************************************************************************************************************
+// 
+//*******************************************************************************************************************************************
+void setup() {
+
+	delay(500);
+	Serial.begin(115200);
+	HEAP_DEBUG_MSG = "mySetup; heap = ";
+	HEAP_DEBUG_PRINTLN("info for (begin)");
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
+	Serial.println(DEBUG_SEPARATOR);
+
+	HEAP_DEBUG_PRINTLN("");
+	HEAP_DEBUG_PRINTLN("Heap (Setup begin)="); 
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
+	setupDisplay();
+	checkFlash();
+	setupSPIFFS();
+	setupWiFi();
+	client.setInsecure(); // TODO fix this. Needed for BearSSL
+
+	timeoutDashboardDataRefresh = millis();
+
+	GetDashboardDataFile();
 	
-	tft.setCursor(0, 0);
-	tftScreenDiagnostics();
-
-	UpdateDashboard();
+	// UpdateDashboard(); // we do this in the loop only
 
 	Serial.println(F("Setup Done!"));
-	HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+	HEAP_DEBUG_PRINT("Heap (setup complete)="); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
 	// #pragma message(Reminder "Fix this problem!")
+
 }
 
 //*******************************************************************************************************************************************
@@ -974,20 +1015,20 @@ void imageTest() {
 // 
 //*******************************************************************************************************************************************
 //*******************************************************************************************************************************************
-void loopNew(void) {
-	//CheckDashboardFetch();
-
-	// visitor WiFi access may timeout at some point, so we many need to re-accept the Terms and Conditions.
-	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
-		Serial.println("Successfully connected!");
-	}
-
-	// Server_Payroll_Hours.png
-	tft.setRotation(3); // 3 = connector to right, long side down
-	Serial.println("Updating... \r\n");
-	// showDasbboardImages();
-	UpdateDashboard();
-}
+//void loopNew(void) {
+//	//CheckDashboardFetch();
+//
+//	// visitor WiFi access may timeout at some point, so we many need to re-accept the Terms and Conditions.
+//	if (confirmedInternetConnectivity(DASHBOARD_HOST) == 0) {
+//		Serial.println("Successfully connected!");
+//	}
+//
+//	// Server_Payroll_Hours.png
+//	tft.setRotation(3); // 3 = connector to right, long side down
+//	Serial.println("Updating... \r\n");
+//	// showDasbboardImages();
+//	UpdateDashboard();
+//}
 
 
 unsigned long timeoutDisplayItem = millis();
@@ -998,6 +1039,7 @@ void UpdateDashboardDisplay() {
 		if (millis() - timeoutDisplayItem > 2000) {
 			yield();
 			tftScreenClear();
+			tft.setRotation(3); // 3 = connector to right, long side down
 			String textItem;
 
 			tft.setCursor(0, 36);
@@ -1014,7 +1056,7 @@ void UpdateDashboardDisplay() {
 			tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
 			tftPrintlnCentered(textItem);//		tft.println(textItem);
 			timeoutDisplayItem = millis();
-			HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+			// HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		}
 	}
 	else {
@@ -1042,7 +1084,6 @@ void loop(void) {
 	//}
 
 	// Server_Payroll_Hours.png
-	tft.setRotation(3); // 3 = connector to right, long side down
 	// Serial.println("Updating... \r\n");
 	// showDasbboardImages();
 }
