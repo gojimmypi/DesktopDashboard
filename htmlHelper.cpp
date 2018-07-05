@@ -62,10 +62,17 @@ String ResponseLocation;
 String ResponseContentLocation;
 String ResponseFirstLine;
 String accessRedirect;    // a value like "/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html%26ap_mac=00:11:22:33:44:55%26client_mac=cc:11:22:33:44:55%26wlan=Visitor%20WiFi%26redirect=www.google.com/"
+uint ResponseContentLength = -1;
 const String CrLf = "\n\r";
 
 
 const int MAX_CONNECTION_TIMEOUT_MILLISECONDS = 8000;
+#ifdef USE_TLS_SSL
+THE_SSL_TYPE* myClient = NULL;
+#else
+WiFiClient* myClient = NULL;
+#endif
+
 
 
 int htmlHelper::Send() {
@@ -73,14 +80,14 @@ int htmlHelper::Send() {
 }
 
 #ifdef USE_TLS_SSL
-htmlHelper::htmlHelper(WiFiClientSecure* thisClient, const char* Host, int Port) {
+htmlHelper::htmlHelper(THE_SSL_TYPE* thisClient, const char* Host, int Port) {
 	myClient = thisClient;
 	thisHost = Host;
 	thisPort = Port;
 }
 
 // helper with initial HTML header to send
-htmlHelper::htmlHelper(WiFiClientSecure* thisClient, const char* Host, int Port, String Header) {
+htmlHelper::htmlHelper(THE_SSL_TYPE* thisClient, const char* Host, int Port, String Header) {
 	htmlHelper(thisClient, Host, Port);
 	sendHeader = Header;
 }
@@ -109,7 +116,7 @@ bool htmlExists(String targetURL) {
 
 	int httpCode = http.GET();
 	//if (!http.connected()) {
-	//	Serial.println("HTTPClient not connected. Aborting bmpDrawFromUrl");
+	//	Serial.println("HTTPClient not connected.");
 	//	return;
 	//}
 	if (httpCode > 0) {
@@ -117,7 +124,7 @@ bool htmlExists(String targetURL) {
 		// file found at server
 		return true;
 	}
-//	http.end;
+	// http.end(); // TODO - sould we end here?
 	return false;
 }
 
@@ -125,7 +132,7 @@ String htmlBasicHeaderText(String verb, const char* targetHost, String targetUrl
 	return verb + " http://" + String(targetHost) + targetUrl + " HTTP/1.1\r\n" +
 		"Host: " + String(targetHost) + "\r\n" +
 		"Content-Encoding: identity" + "\r\n" +
-		"Connection: keep-alive\r\n\r\n";
+		"Connection: close\r\n\r\n"; // TODO, should this be keep-alive ?
 }
 
 
@@ -233,9 +240,6 @@ void getHeaderValue(String keyWord, String str, String& OutValue) {
 	}
 }
 
-
-
-uint ResponseContentLength = -1;
 //**************************************************************************************************************
 //  htmlSend - send thisHeader to targetHost:targetPort
 //
@@ -249,12 +253,16 @@ uint ResponseContentLength = -1;
 //                  5 content too large to load (would be out of memory if content attempted to load)
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
-#ifdef USE_TLS_SSL
-	WiFiClient client;
-//	WiFiClientSecure client; // TODO WiFiClientSecure
-#else
-	WiFiClient client;
-#endif
+//#ifdef USE_TLS_SSL
+//	WiFiClient client;
+////	WiFiClientSecure client; // TODO WiFiClientSecure
+//#else
+//	WiFiClient client;
+//#endif
+	if (myClient == NULL) {
+		Serial.println("Error: myClient not initialized!");
+		return 1;
+	}
 	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
 	String thisResponse; thisResponse = "";
 	String thisResponseHeader; thisResponseHeader = "";
@@ -268,7 +276,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	Serial.println(DEBUG_SEPARATOR);
 #endif
 
-	if (!client.connect(thisHost, thisPort)) {
+	if (!myClient->connect(thisHost, thisPort)) {
 #ifdef HTTP_DEBUG
 		Serial.println("htmlSend connection failed");
 #endif
@@ -288,21 +296,20 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 		Serial.println("Starting out of memory!");
 	}
 	else {
-		Serial.print("Memory free heap: ");
-		HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+		HEAP_DEBUG_PRINT("Memory free heap: ");	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	}
 
 	// BEGIN TIME SENSITIVE SECTION (edit with care, don't waste CPU, yield to OS!)
-	client.flush(); // discard any incoming data
+	myClient->flush(); // discard any incoming data
 	yield();
-	client.print(sendHeader); //blocks until either data is sent and ACKed, or timeout occurs (currently hard-coded to 5 seconds). 
+	myClient->print(sendHeader); //blocks until either data is sent and ACKed, or timeout occurs (currently hard-coded to 5 seconds). 
 	timeout = millis();
-	while (client.available() == 0) {
+	while (myClient->available() == 0) {
 		yield(); // give the OS a little breathing room 
 		if ((millis() - timeout) > MAX_CONNECTION_TIMEOUT_MILLISECONDS) {
 			Serial.println(">>> Client Timeout !");
-			client.flush();
-			client.stop();
+			myClient->flush();
+			myClient->stop();
 			return 3;
 		}
 		delay(10); // TODO does delay offer any benefit over yield() ?
@@ -314,16 +321,16 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	ResponseFirstLine = "";
 	while (countReadResponseAttempts > 0) {
 		// Read all the lines of the reply from server and print them to Serial
-		while (client.available()) {
+		while (myClient->available()) {
 			delay(1);
 			// we'll always incrementally read header lines, but we may not read content if it is too large.
 			if ((!endOfHeader) || (ResponseContentLength < (ESP.getFreeHeap() - ESP_MIN_HEAP))) {
-				line = client.readStringUntil('\r'); // note that the char AFTER this is often a \n - but the documentation says to read until \r
+				line = myClient->readStringUntil('\r'); // note that the char AFTER this is often a \n - but the documentation says to read until \r
 			}
 			else {
 				Serial.println("Content too large! Flushing client to discard Rx data...");
-				client.flush();
-				client.stop();
+				myClient->flush();
+				myClient->stop();
 				return 5; // abort, we cannot load this content
 			}
 			if ((line != "") && (ResponseFirstLine == "")) {
@@ -356,9 +363,9 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 				Serial.print("!");
 				thisResponse += CrLf + "Out of memory! " + CrLf;
 				Serial.print("Out of memory! Heap=");
-				HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+				HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 				isOutOfMemory = true;
-				client.flush();
+				myClient->flush();
 				return 4;
 			}
 
@@ -462,7 +469,33 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 //#endif
 
 }
+#ifdef USE_TLS_SSL
+int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort) {
+	myClient = thisClient;
+	htmlSend(thisHost, thisPort,"");
+}
+int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort, String sendHeader) {
+	myClient = thisClient;
+	htmlSend(thisHost, thisPort, sendHeader);
+}
+#else
+int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort) {
+	myClient = thisClient;
+	htmlSend(thisHost, thisPort, "");
+}
+int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader) {
+	myClient = thisClient;
+	htmlSend(thisHost, thisPort, sendHeader);
+}
+#endif
 
+#ifdef USE_TLS_SSL
+void htmlSetClient(THE_SSL_TYPE* thisClient) {
+#else
+void htmlSetClient(WiFiClient* thisClient) {
+#endif
+	myClient = thisClient;
+}
 
 int doAcceptTermsAndConditions() {
 	//**************************************************************************************************************
@@ -634,6 +667,8 @@ int doAcceptTermsAndConditions() {
 //**************************************************************************************************************
 int confirmedInternetConnectivity(const char* host) {
 	// This will send the request to the server
+	HEAP_DEBUG_MSG = "confirmedInternetConnectivity: ";
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	String htmlString;
 //	const char* internetHostCheck = "gojimmypi-dev-imageconvert2bmp.azurewebsites.net"; // some well known, reliable internet url (ideally small html payload)
 
@@ -656,7 +691,9 @@ int confirmedInternetConnectivity(const char* host) {
 
 
 #ifdef USE_TLS_SSL
+	HEAP_DEBUG_PRINT("1. "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	int connectionStatus = htmlSend(host, 443, htmlString);
+	HEAP_DEBUG_PRINT("2. "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 #else
 	int connectionStatus = htmlSend(host, 80, htmlString);
 #endif
@@ -685,6 +722,6 @@ int confirmedInternetConnectivity(const char* host) {
 		Serial.println("Error connecting.");
 		return 1;
 	}
-	return 0;
 	Serial.println("confirmedInternetConnectivity - success!");
+	return 0;
 };

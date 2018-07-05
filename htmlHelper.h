@@ -49,12 +49,19 @@ void getHeaderValue(String keyWord, String str, String& OutValue);
 // assemble a basic header in a string given verb, host, and URL:
 String htmlBasicHeaderText(String verb, const char* host, String);
 
-// int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort);
-// int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader);
-
+int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort);
+int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader);
+int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort);
+int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort, String sendHeader);
+ 
 
 int htmlSend(const char* thisHost, int thisPort, String sendHeader);
 
+#ifdef USE_TLS_SSL
+void htmlSetClient(THE_SSL_TYPE* thisClient);
+#else
+void htmlSetClient(WiFiClient* thisClient);
+#endif
 
 int doAcceptTermsAndConditions();
 
@@ -67,11 +74,6 @@ class htmlHelper {
 
 	// depending on the USE_TLS_SSL the myClient is either WiFiClient or WiFiClientSecure (but they are different! not sure secure or not...)
 
-#ifdef USE_TLS_SSL
-	WiFiClientSecure* myClient;
-#else
-	WiFiClient* myClient;
-#endif
 	const char* thisHost;
 	int thisPort;
 	String sendHeader;
@@ -79,8 +81,8 @@ class htmlHelper {
 public:
 
 #ifdef USE_TLS_SSL
-	htmlHelper(WiFiClientSecure*, const char*, int, String);
-	htmlHelper(WiFiClientSecure*, const char*, int);
+	htmlHelper(THE_SSL_TYPE*, const char*, int, String);
+	htmlHelper(THE_SSL_TYPE*, const char*, int);
 #else
 	htmlHelper(WiFiClient*, const char*, int, String);
 	htmlHelper(WiFiClient*, const char*, int);
