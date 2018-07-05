@@ -4,6 +4,8 @@
 #include "DashboardClient.h"
 #include "GlobalDefine.h"
 
+const int MIN_HEAP_LIMIT = 3000; // Set a limit on how much heap space can be used for our linked list of objects
+
 DashboardClient::DashboardClient() {
 
 }
@@ -103,15 +105,26 @@ void DashboardClient::value(String value) {
 		//DashboardItemArray.push_back(thisDashboardID);
 		itemCount++;
 		if (thisItem->next == NULL) {
-			Serial.print("Creating item ");
-			Serial.println(itemCount);
-			HEAP_DEBUG_PRINT("Heap="); HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
-			nextItem = new DashboardItem;
+			JSON_DEBUG_PRINT("Creating item ");
+			JSON_DEBUG_PRINTLN(itemCount);
+			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+			if (ESP.getFreeHeap() > MIN_HEAP_LIMIT) {
+				nextItem = new DashboardItem;
+			}
+			else
+			{
+				HEAP_DEBUG_PRINT("Warning: Low memory detected!");
+				thisItem->dashboard_short_summary = "Low memory";
+				thisItem->current_value_display = (String)ESP.getFreeHeap();
+				thisItem->current_value = (String)ESP.getFreeHeap();
+				nextItem = NULL; // there's no next item when we are out of memory!
+			}
 			thisItem->next = nextItem;
 		}
 		// else { Serial.println("Item already exists"); }
 		thisItem->itemID = itemCount;
 		thisItem->dashboard_id = thisDashboardID;
+
 	}
 	if (currentKey == "dashboard_short_summary") {
 		thisItem->dashboard_short_summary = value;
