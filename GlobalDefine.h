@@ -1,6 +1,4 @@
 // GlobalDefine.h
-
-#pragma once
 #ifndef _GLOBALDEFINE_h
 #define _GLOBALDEFINE_h
 
@@ -36,7 +34,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 // End user config
 //*******************************************************************************************************************************************
 
-
+// TODO replace THE_SSL_TYPE with actual type in code was BearSSL confirmed to be functioning properly
+#define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure
+//#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure
 
 #define USE_TLS_SSL // when defined, JSON data will use SSL
 // #define SCREEN_DEBUG // when defined, display low level screen debug info 
@@ -47,7 +47,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define HTTP_DEBUG // when defined, display WiFi debug info 
 #define DEBUG_SEPARATOR "***********************************"
 #define TIMER_DEBUG // when defined, display diagnostic timer info
-#define HEAP_DEBUG
+#define HEAP_DEBUG // when defined, display diagnostic heap info
 #define HARDWARE_DEBUG
 
 // Statements like:
@@ -66,8 +66,20 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define $Line MakeString( Stringize, __LINE__ )
 #define Reminder __FILE__ "(" $Line ") : Reminder: "
 
+static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
 //********************************************************
 // some optional Serial.print() statements...
+//********************************************************
+#ifdef WIFI_DEBUG
+#define WIFI_DEBUG_PRINT(string)           (Serial.print(string))
+#define WIFI_DEBUG_PRINTLN(string)         (Serial.println(string))
+#endif
+
+#ifndef WIFI_DEBUG
+#define WIFI_DEBUG_PRINT(string)           ((void)0)
+#define WIFI_DEBUG_PRINTLN(string)         ((void)0)
+#endif
+
 //********************************************************
 #ifdef HTTP_DEBUG
 #define HTTP_DEBUG_PRINT(string)           (Serial.print(string))
@@ -125,12 +137,14 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 //********************************************************
 #ifdef HEAP_DEBUG
-#define HEAP_DEBUG_PRINT(string)           (Serial.print(string))
-#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf(string,uint32_t))
-#define HEAP_DEBUG_PRINTLN(string)         (Serial.println(string))
+static char * HEAP_DEBUG_MSG = "Heap = ";
+#define HEAP_DEBUG_PRINT(string)           (Serial.print  ( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
+#define HEAP_DEBUG_PRINTLN(string)         (Serial.println( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
+#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                   )
 #endif
 
 #ifndef HEAP_DEBUG
+static const char *  HEAP_DEBUG_MSG = "";
 #define HEAP_DEBUG_PRINT(string)           ((void)0)
 #define HEAP_DEBUG_PRINTF(string)          ((void)0)
 #define HEAP_DEBUG_PRINTLN(string)         ((void)0)
