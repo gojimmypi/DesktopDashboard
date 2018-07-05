@@ -44,7 +44,7 @@ void tftPrintlnCentered(String text) {
 	SCREEN_DATA_DEBUG_PRINTLN(text);
 
 	//HEAP_DEBUG_PRINT("Heap=");
-	//HEAP_DEBUG_PRINTLN(ESP.getFreeHeap());
+	//HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 }
 
 //*******************************************************************************************************************************************
