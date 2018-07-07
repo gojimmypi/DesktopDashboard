@@ -15,9 +15,9 @@
 // Target display is like the Adafruit ILI9341 http://www.adafruit.com/products/1651
 //
 //***************************************************
-#include "FS.h"
-
 #include "GlobalDefine.h"
+#include "FS.h" // ESP8266 file system wrapper
+
 #include "hardwareHelper.h"
 #include "DashboardClient.h"
 #include "htmlHelper.h"
@@ -43,7 +43,9 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 // include "DashboardListener.h"   // this is our implementation of a JSON listener used by JsonStreamingParser
 // include "/workspace/FastSeedTFTv2//FastTftILI9341.h" // needs avr/pgmspace - what to do for ESP8266?
 
+#ifdef _MSC_VER
 #pragma region BOARD_DETECT
+#endif
 
 #undef FOUND_BOARD
 
@@ -63,7 +65,9 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #pragma message(Reminder "Error Target hardware not defined !")
 #endif // ! FOUND_BOARD
 
+#ifdef _MSC_VER
 #pragma endregion
+#endif
 
 
 //
@@ -430,7 +434,7 @@ void tcpCleanup()
 }
 
 void GetDashboardData() {
-	HEAP_DEBUG_MSG = "GetDashboardData ";
+	SET_HEAP_MESSAGE("GetDashboardData ");
 	if (!fetchingData && !fetchWaiting && !readyDashboardDataRefresh()) {
 		// HEAP_DEBUG_PRINT("Prestop ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		client.stopAll();
@@ -573,7 +577,7 @@ void GetDashboardData() {
 		}
 
 
-		int retryCounter = 0;
+		// int retryCounter = 0;
 		// see http://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/client-examples.html
 
 		Serial.print("\r\n\r\nProceeding! client.status = ");
@@ -708,7 +712,9 @@ void GetDashboardDataFile() {
 	// TODO - if the file does not exist, then use default.
 }
 
+#ifdef _MSC_VER
 #pragma region setup
+#endif
 
 int setupSPIFFS() {
 	int okSPIFFS = 0;
@@ -784,7 +790,7 @@ int setupDisplay() {
 }
 
 int setupWiFi() {
-	HEAP_DEBUG_MSG = "setupWiFi Heap = ";
+	SET_HEAP_MESSAGE("setupWiFi Heap = ");
 	HEAP_DEBUG_PRINTLN("Heap (setupWiFi begin)");
 
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
@@ -808,9 +814,14 @@ int setupWiFi() {
 	HEAP_DEBUG_PRINT("Heap (setupWiFi end); "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	return 0;
 }
-#pragma endregion
 
+#ifdef _MSC_VER
+#pragma endregion
+#endif
+
+#ifdef _MSC_VER
 #pragma region OldStuff
+#endif
 //char json[] = "{\"a\":3, \"b\":{\"c\":\"d\"}}";
 //for (int i = 0; i < sizeof(json); i++) {
 //	parser.parse(json[i]);
@@ -849,8 +860,9 @@ int setupWiFi() {
 // Hello World!
 
 
+#ifdef _MSC_VER
 #pragma endregion
-
+#endif
 
 //*******************************************************************************************************************************************
 // 
@@ -859,7 +871,7 @@ void setup() {
 
 	delay(500);
 	Serial.begin(115200);
-	HEAP_DEBUG_MSG = "mySetup; heap = ";
+	SET_HEAP_MESSAGE( "mySetup; heap = ");
 	HEAP_DEBUG_PRINTLN("info for (begin)");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
@@ -885,7 +897,7 @@ void setup() {
 	HEAP_DEBUG_PRINT("Heap (setup complete)="); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 	// #pragma message(Reminder "Fix this problem!")
-
+	Serial.println(("a" == "b") ? (getHeapMsg() + (String)ESP.getFreeHeap()) : "msg") ;
 }
 
 //*******************************************************************************************************************************************
