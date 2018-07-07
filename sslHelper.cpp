@@ -12,7 +12,7 @@ void testSSL() {
 
 
 	Serial.println("TestSSL");
-	HEAP_DEBUG_MSG = "testSSL";
+	SET_HEAP_MESSAGE("testSSL");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	const char* host = "api.github.com";
 	const int httpsPort = 443;
@@ -61,7 +61,7 @@ void testSSL() {
 	client.print(tlsHTML);
 
 	Serial.println("request sent");
-	HEAP_DEBUG_PRINT(HEAP_DEBUG_MSG); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	HEAP_DEBUG_PRINT(getHeapMsg()); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	while (client.connected()) {
 		String line = client.readStringUntil('\n');
 		if (line == "\r") {
