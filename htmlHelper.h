@@ -56,6 +56,7 @@ int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort, Strin
  
 
 int htmlSend(const char* thisHost, int thisPort, String sendHeader);
+int htmlSendPlainText(const char* thisHost, String sendHeader);
 
 #ifdef USE_TLS_SSL
 void htmlSetClient(THE_SSL_TYPE* thisClient);

@@ -49,7 +49,9 @@ unsigned long timeout = millis();
 const int ESP_MIN_HEAP = 4096; // we'll monitor operations to ensure we never run out of space (e.g. a massive web page)
 int MAX_WEB_RESPONSE = (ESP.getFreeHeap() > 10000 ? ESP.getFreeHeap() - 10000 : 10000);
 
-const char* accessHost = "1.1.1.1"; // 1.1.1.1 is typically the address of a Cisco WiFi guest Access Point. TODO extract from http response
+//const char* accessHost = "1.1.1.1"; // 1.1.1.1 is typically the address of a Cisco WiFi guest Access Point. TODO extract from http response
+const char* accessHost = "192.0.2.1";
+
 const char* wifiUserAgent = "User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; ASTE; rv:11.0) like Gecko";
 const char* internetHostCheck = "gojimmypi-dev-imageconvert2bmp.azurewebsites.net"; // some well known, reliable internet url (ideally small html payload)
 const char* httpText = "http://";
@@ -132,7 +134,7 @@ String htmlBasicHeaderText(String verb, const char* targetHost, String targetUrl
 	return verb + " http://" + String(targetHost) + targetUrl + " HTTP/1.1\r\n" +
 		"Host: " + String(targetHost) + "\r\n" +
 		"Content-Encoding: identity" + "\r\n" +
-		"Connection: close\r\n\r\n"; // TODO, should this be keep-alive ?
+		"Connection: keep-alive\r\n\r\n"; // TODO, should this be keep-alive ?
 }
 
 
@@ -183,6 +185,7 @@ String htmlTagValue(String  thisHTML, String thisTag) {
 	int endPosition = thisHTML.indexOf(tagEnd);
 	String res = thisHTML.substring(startPosition, endPosition);
 	res.trim();
+	Serial.println("thisTag = [" + res + "]");
 	return res;
 }
 
@@ -251,6 +254,7 @@ void getHeaderValue(String keyWord, String str, String& OutValue) {
 //                  3 client timeout (see MAX_CONNECTION_TIMEOUT_MILLISECONDS)
 //                  4 out of memory (rare, but perhaps already running low on memory or unusually large header)
 //                  5 content too large to load (would be out of memory if content attempted to load)
+//                  6 myClient is NULL
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 //#ifdef USE_TLS_SSL
@@ -259,9 +263,10 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 //#else
 //	WiFiClient client;
 //#endif
+	Serial.println(">>>> htmlSend");
 	if (myClient == NULL) {
 		Serial.println("Error: myClient not initialized!");
-		return 1;
+		return 6;
 	}
 	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
 	String thisResponse; thisResponse = "";
@@ -278,9 +283,9 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 
 	if (!myClient->connect(thisHost, thisPort)) {
 #ifdef HTTP_DEBUG
-		Serial.println("htmlSend connection failed");
+		Serial.println("htmlSend connection failed, trying htmlSendPlainText");
 #endif
-		return 2;
+		return htmlSendPlainText(thisHost, sendHeader);
 	}
 
 #ifdef HTTP_DEBUG
@@ -392,10 +397,14 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	// take ResponseLocation that looks like http://1.1.1.1/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html&ap_mac=00:11:22:33:44:55&client_mac=cc:11:22:33:44:55&wlan=Visitor%20WiFi&redirect=www.w3.org/
 	// then strip the http & host name, and urlencode for the accessRedirect
 	//
+	Serial.println("accessRedirect debug");
 	if (ResponseLocation.length() > 138) { // make sure we have a minimum length REsponse Location string
+		Serial.println("ResponseLocation = " + ResponseLocation);
 		accessRedirect = ResponseLocation;  // should contain full URL:  http://1.1.1.1/path?switchurl=... but we only want path?switchurl=...
-		accessRedirect.remove(0, 14);       // remove the first 14 characters that should be: http://1.1.1.1 TODO handle when different (longer?)
+		Serial.println("accessRedirect = " + ResponseLocation);
+		accessRedirect.remove(0, 16);       // remove the first 14 characters that should be: http://1.1.1.1 TODO handle when different (longer?)
 		accessRedirect.replace("&", "%26"); // urlencode the ampersands
+		Serial.println("accessRedirect = " + ResponseLocation);
 	}
 	else {
 		// if there's no Location: value in header, we are likely not needing a redirect on the visitor WiFi
@@ -428,12 +437,12 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	//Serial.print("thisResponse.indexOf(Web Authentication Redirect)");
 	//Serial.println(thisResponse.indexOf("Web Authentication Redirect"));
 	//Serial.println("");
-	//Serial.print("thisResponseHeader.indexOf(Location: http://1.1.1.1/)");
-	//Serial.println(thisResponseHeader.indexOf("Location: http://1.1.1.1/"));
-	//Serial.println("");
-	//Serial.print("htmlTagValue(thisResponse, TITLE) = ");
-	//Serial.println(htmlTagValue(thisResponse,"TITLE"));
-	//Serial.println("");
+	Serial.print("thisResponseHeader.indexOf(Location: http://192.0.2.1/)");
+	Serial.println(thisResponseHeader.indexOf("Location: http://192.0.2.1/"));
+	Serial.println("");
+	Serial.print("htmlTagValue(thisResponse, TITLE) = ");
+	Serial.println(htmlTagValue(thisResponse,"TITLE"));
+	Serial.println("");
 
 
 	//Serial.print("my MAC = ");
@@ -449,11 +458,12 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 #endif
 
 	if (
-		(thisResponseHeader.indexOf("Location: http://1.1.1.1/") > 0) // anytime the 1.1.1.1 address is in the header, we are doing a redirect
+		(thisResponseHeader.indexOf("Location: http://192.0.2.1/") > 0) // anytime the 1.1.1.1 address is in the header, we are doing a redirect
 		||
 		(htmlTagValue(thisResponse, "TITLE") == "Web Authentication Redirect") // anytime this text is found title tag, we are doing a redirect
 		)
 	{
+		Serial.println("REDIRECT!!");
 		return 1; // success, but with redirect
 	}
 	else {
@@ -472,11 +482,11 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 #ifdef USE_TLS_SSL
 int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort) {
 	myClient = thisClient;
-	htmlSend(thisHost, thisPort,"");
+	return htmlSend(thisHost, thisPort,"");
 }
 int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort, String sendHeader) {
 	myClient = thisClient;
-	htmlSend(thisHost, thisPort, sendHeader);
+	return htmlSend(thisHost, thisPort, sendHeader);
 }
 #else
 int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort) {
@@ -488,6 +498,235 @@ int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String 
 	htmlSend(thisHost, thisPort, sendHeader);
 }
 #endif
+
+
+int htmlSendPlainText(const char* thisHost, String sendHeader) {
+	int thisPort = 80;
+	WiFiClient OtherClient;
+	//#ifdef USE_TLS_SSL
+	//	WiFiClient client;
+	////	WiFiClientSecure client; // TODO WiFiClientSecure
+	//#else
+	//	WiFiClient client;
+	//#endif
+	Serial.println(">>>> htmlSendPlainText");
+
+	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
+	String thisResponse; thisResponse = "";
+	String thisResponseHeader; thisResponseHeader = "";
+
+#ifdef HTTP_DEBUG
+	Serial.println(DEBUG_SEPARATOR);
+	Serial.print("Connecting to ");
+	Serial.print(thisHost); // e.g. www.google.com, no http, no path, just dns name
+	Serial.print("; port ");
+	Serial.println(thisPort);
+	Serial.println(DEBUG_SEPARATOR);
+#endif
+
+	if (!OtherClient.connect(thisHost, thisPort)) {
+#ifdef HTTP_DEBUG
+		Serial.println("htmlSend OtherClient connection failed");
+#endif
+		return 2;
+	}
+
+#ifdef HTTP_DEBUG
+	Serial.println("Sending OtherClient HTML: ");
+	Serial.println(DEBUG_SEPARATOR);
+	Serial.println(sendHeader);
+	Serial.println(DEBUG_SEPARATOR);
+#endif
+
+
+	isOutOfMemory = (ESP.getFreeHeap() < ESP_MIN_HEAP); // we never want to read a header so big that it exceeds available memory
+	if (isOutOfMemory) {
+		Serial.println("Starting out of memory!");
+	}
+	else {
+		HEAP_DEBUG_PRINT("Memory free heap: ");	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	}
+
+	// BEGIN TIME SENSITIVE SECTION (edit with care, don't waste CPU, yield to OS!)
+	OtherClient.flush(); // discard any incoming data
+	yield();
+	OtherClient.print(sendHeader); //blocks until either data is sent and ACKed, or timeout occurs (currently hard-coded to 5 seconds). 
+	timeout = millis();
+	while (OtherClient.available() == 0) {
+		yield(); // give the OS a little breathing room 
+		if ((millis() - timeout) > MAX_CONNECTION_TIMEOUT_MILLISECONDS) {
+			Serial.println(">>> PlainText Client Timeout !");
+			OtherClient.flush();
+			OtherClient.stop();
+			return 3;
+		}
+		delay(10); // TODO does delay offer any benefit over yield() ?
+	}
+
+	bool endOfHeader = false; // we'll keep track of where the html header ends, and where the payload begins
+	int thisLineCount = 0;
+	String line = "";
+	ResponseFirstLine = "";
+	while (countReadResponseAttempts > 0) {
+		// Read all the lines of the reply from server and print them to Serial
+		while (OtherClient.available()) {
+			delay(1);
+			// we'll always incrementally read header lines, but we may not read content if it is too large.
+			if ((!endOfHeader) || (ResponseContentLength < (ESP.getFreeHeap() - ESP_MIN_HEAP))) {
+				line = OtherClient.readStringUntil('\r'); // note that the char AFTER this is often a \n - but the documentation says to read until \r
+			}
+			else {
+				Serial.println("Content too large! Flushing client to discard Rx data...");
+				OtherClient.flush();
+				OtherClient.stop();
+				return 5; // abort, we cannot load this content
+			}
+			if ((line != "") && (ResponseFirstLine == "")) {
+				ResponseFirstLine = line;
+			}
+
+			if (line.startsWith("Location: ")) {
+				ResponseLocation = line.substring(10);
+			}
+			if (line.startsWith("\nLocation: ")) { // we [read until \r] so the \n may come before or after the \r
+				ResponseLocation = line.substring(11);
+			}
+
+			yield(); // give the OS a little breathing room when loading large documents
+			if (ESP.getFreeHeap() > ESP_MIN_HEAP) {
+				Serial.print(".");
+				if (!endOfHeader) {
+					// we only look for these values in the header, never the content!
+					getHeaderValue("Content-Location", line, ResponseContentLocation);
+					getHeaderValue("Content-Length", line, ResponseContentLength);
+					thisResponseHeader += line; // we always capture the full header, as it has interesting fields (e.g. length of content which might exceed our memory capacity!)
+				}
+				if (endOfHeader) { thisResponse += line; } // always capture the response once we reach the end of the header
+
+				if (line.length() <= 1) { // the first blank line found signifies the separation between header and content
+					endOfHeader = true;
+				}
+			}
+			else {
+				Serial.print("!");
+				thisResponse += CrLf + "Out of memory! " + CrLf;
+				Serial.print("Out of memory! Heap=");
+				HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+				isOutOfMemory = true;
+				OtherClient.flush();
+				return 4;
+			}
+
+			thisLineCount++;
+		}
+		//Serial.print("(");
+		//Serial.print(countReadResponseAttempts);
+		//Serial.print(")");
+		countReadResponseAttempts--; // TODO - do we stil need to look for more data like this?
+									 // Serial.println("Next attempt!");
+		delay(100); // give the OS a little breathing room when loading large documents
+	}
+	// END TIME SENSITIVE SECTION 
+#ifdef HTTP_DEBUG
+#endif
+	Serial.println("");
+	Serial.print("First Response Line = ");
+	Serial.println(ResponseFirstLine);
+	Serial.print("Found Response Content Length = ");
+	Serial.println(ResponseContentLength);
+	Serial.print("Found Response Content Location = ");
+	Serial.println(ResponseContentLocation);
+	//
+	// take ResponseLocation that looks like http://1.1.1.1/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.html&ap_mac=00:11:22:33:44:55&client_mac=cc:11:22:33:44:55&wlan=Visitor%20WiFi&redirect=www.w3.org/
+	// then strip the http & host name, and urlencode for the accessRedirect
+	//
+	Serial.println("accessRedirect debug");
+	if (ResponseLocation.length() > 138) { // make sure we have a minimum length REsponse Location string
+		Serial.println("ResponseLocation = " + ResponseLocation);
+		accessRedirect = ResponseLocation;  // should contain full URL:  http://1.1.1.1/path?switchurl=... but we only want path?switchurl=...
+		Serial.println("accessRedirect = " + accessRedirect);
+		//accessRedirect.remove(0, 14);       // remove the first 14 characters that should be: http://1.1.1.1 TODO handle when different (longer?)
+		accessRedirect.remove(0, 16);       // remove the first 14 characters that should be: http://192.0.2.1 TODO handle when different (longer?)
+		accessRedirect.replace("&", "%26"); // urlencode the ampersands
+		Serial.println("accessRedirect = " + accessRedirect);
+		//                                   http://192.0.2.1/fs/customwebauth/login.html?switch_url=http://192.0.2.1/login.html&ap_mac=00:3a:7d:13:aa:80&client_mac=18:fe:34:d7:7c:3b&wlan=Visitor%20WiFi&redirect=www.w3.org/
+	}
+	else {
+		// if there's no Location: value in header, we are likely not needing a redirect on the visitor WiFi
+		//Serial.println("Warning accessRedirect too short.");
+	}
+
+
+#ifdef HTTP_DEBUG
+	Serial.println("");
+	Serial.println("Response Header:");
+	Serial.println(DEBUG_SEPARATOR);
+	Serial.println(thisResponseHeader);
+	Serial.println(DEBUG_SEPARATOR);
+	Serial.println("");
+	if (myDebugLevel >= 2) { // only show the response content for debug level 2 or greater
+		Serial.println("Response Payload Content:");
+		Serial.println(DEBUG_SEPARATOR);
+		Serial.println(thisResponse);
+		Serial.println(DEBUG_SEPARATOR);
+		Serial.println("");
+	}
+	//Serial.println("Page Title=" + htmlTagValue(thisResponse, "TITLE") );
+	Serial.println("");
+	Serial.print("Read done! Additional Read Responses:");
+	Serial.println(countReadResponseAttempts);
+	Serial.print("*** End of response. ");
+	Serial.print(thisLineCount);
+	Serial.println(" lines. ");
+	Serial.println("");
+	//Serial.print("thisResponse.indexOf(Web Authentication Redirect)");
+	//Serial.println(thisResponse.indexOf("Web Authentication Redirect"));
+	//Serial.println("");
+	Serial.print("thisResponseHeader.indexOf(Location: http://192.0.2.1/)");
+	Serial.println(thisResponseHeader.indexOf("Location: http://192.0.2.1/"));
+	Serial.println("");
+	Serial.print("htmlTagValue(thisResponse, TITLE) = ");
+	Serial.println(htmlTagValue(thisResponse, "TITLE"));
+	Serial.println("");
+
+
+	//Serial.print("my MAC = ");
+	//Serial.println(myMacAddressString());
+
+	//Serial.println("Changing MAC...");
+	//uint8_t  mac[] = { 0x77, 0x01, 0x02, 0x03, 0x04, 0x05 };
+	//wifi_set_macaddr(STATION_IF, &mac[0]);
+	//Serial.println("MAC Change Done!");
+
+	//Serial.print("my MAC = ");
+	//Serial.println(myMacAddressString());
+#endif
+
+	if (
+		(thisResponseHeader.indexOf("Location: http://192.0.2.1/") > 0) // anytime the 1.1.1.1 address is in the header, we are doing a redirect
+		||
+		(htmlTagValue(thisResponse, "TITLE") == "Web Authentication Redirect") // anytime this text is found title tag, we are doing a redirect
+		)
+	{
+		Serial.println("REDIRECT!!");
+		return 1; // success, but with redirect
+	}
+	else {
+		Serial.println("CONNECTED!!");
+		return 0; // success! Internet access ready.
+	}
+
+	//#ifdef ARDUINO_ARCH_ESP8266
+	//	client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+	//#endif
+	//
+	//#ifdef ARDUINO_ARCH_ESP32
+	//	client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+	//#endif
+
+}
+
+
 
 #ifdef USE_TLS_SSL
 void htmlSetClient(THE_SSL_TYPE* thisClient) {
@@ -514,6 +753,12 @@ int doAcceptTermsAndConditions() {
 	// <META http-equiv="refresh" content="1; URL=http://1.1.1.1/fs/customwebauth/login.html?switch_url=http://1.1.1.1/login.htmlap_mac=00:11:22:33:44:55&client_mac=11:22:33:44:55:66&wlan=My%20Visitor%20WiFi&redirect=www.google.com/">
 	// </HEAD></HTML>
 	// 
+
+	// <HTML><HEAD><TITLE> Web Authentication Redirect< / TITLE>
+	// <META http-equiv="Cache-control" content = "no-cache">
+	// <META http-equiv="Pragma" content = "no-cache">
+	// <META http-equiv="Expires" content = "-1">
+	// <META http-equiv="refresh" content = "1; URL=http://192.0.2.1/fs/customwebauth/login.html?switch_url=http://192.0.2.1/login.html&ap_mac=00:11:22:33:44:55&client_mac=11:22:33:44:55:66&wlan=My%20Visitor%20WiFi&redirect=www.w3.org/">< / HEAD>< / HTML>
 	// assumes the access point is called My Visitor Wifi, and we are trying to connect to google.com
 	//
 	// in particular, note the META refresh redirector.  TODO: programmatically extract the META redirect path
@@ -667,7 +912,7 @@ int doAcceptTermsAndConditions() {
 //**************************************************************************************************************
 int confirmedInternetConnectivity(const char* host) {
 	// This will send the request to the server
-	HEAP_DEBUG_MSG = "confirmedInternetConnectivity: ";
+	setHeapMsg ("confirmedInternetConnectivity: ");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	String htmlString;
 //	const char* internetHostCheck = "gojimmypi-dev-imageconvert2bmp.azurewebsites.net"; // some well known, reliable internet url (ideally small html payload)

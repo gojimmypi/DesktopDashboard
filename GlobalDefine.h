@@ -1,6 +1,14 @@
 // GlobalDefine.h
+
 #ifndef _GLOBALDEFINE_h
 #define _GLOBALDEFINE_h
+
+#if defined(ARDUINO) && ARDUINO >= 100
+	#include "arduino.h"
+#else
+	#include "WProgram.h"
+#endif
+
 
 //*******************************************************************************************************************************************
 // Begin user config
@@ -20,9 +28,9 @@ static const char* WIFI_PWD = "my-WiFi-PASSWORD"
 
 static const char* DASHBOARD_DEFAULT_DATA = "sampledata.json";
 static const char* DASHBOARD_PATH = "/theDataPath/";
-static const char* DASHBOARD_APP  = "/theDashboardApplicationPath/";
+static const char* DASHBOARD_APP = "/theDashboardApplicationPath/";
 static const char* DASHBOARD_HOST = "mydashboardhost.com";
-static const char* DASHBOARD_KEY  = "XYZZY";
+static const char* DASHBOARD_KEY = "XYZZY";
 static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50 F3 C0 F6 80 CF 80 3B 2E 19";
 // will build:  http://mydashboardhost.com/theDashboardApplicationPath/
 //      and:    http://mydashboardhost.com/theDataPath/
@@ -66,10 +74,11 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define $Line MakeString( Stringize, __LINE__ )
 #define Reminder __FILE__ "(" $Line ") : Reminder: "
 
-static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
-//********************************************************
-// some optional Serial.print() statements...
-//********************************************************
+// static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
+												//static String DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
+												//********************************************************
+												// some optional Serial.print() statements...
+												//********************************************************
 #ifdef WIFI_DEBUG
 #define WIFI_DEBUG_PRINT(string)           (Serial.print(string))
 #define WIFI_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -80,7 +89,7 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define WIFI_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef HTTP_DEBUG
 #define HTTP_DEBUG_PRINT(string)           (Serial.print(string))
 #define HTTP_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -91,7 +100,7 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define HTTP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef SCREEN_DEBUG
 #define SCREEN_DEBUG_PRINT(string)         (Serial.print(string))
 #define SCREEN_DEBUG_PRINTLN(string)       (Serial.println(string))
@@ -102,7 +111,7 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define SCREEN_DEBUG_PRINTLN(string)       ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef SCREEN_DATA_DEBUG
 #define SCREEN_DATA_DEBUG_PRINT(string)    (Serial.print(string))
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  (Serial.println(string))
@@ -113,7 +122,7 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef JSON_DEBUG
 #define JSON_DEBUG_PRINT(string)           (Serial.print(string))
 #define JSON_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -124,7 +133,7 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define JSON_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef TIMER_DEBUG
 #define TIMER_DEBUG_PRINT(string)           (Serial.print(string))
 #define TIMER_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -135,20 +144,37 @@ static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this 
 #define TIMER_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+												//********************************************************
 #ifdef HEAP_DEBUG
-static char * HEAP_DEBUG_MSG = "Heap = ";
-#define HEAP_DEBUG_PRINT(string)           (Serial.print  ( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
-#define HEAP_DEBUG_PRINTLN(string)         (Serial.println( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
-#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                   )
+
+//static char * HEAP_DEBUG_MSG = "Heap = ";
+//#define HEAP_DEBUG_PRINT(string)           (Serial.print  ( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
+//#define HEAP_DEBUG_PRINTLN(string)         (Serial.println( (string == DEFAULT_DEBUG_MESSAGE) ? (HEAP_DEBUG_MSG + (String)ESP.getFreeHeap()) : string ) )
+//#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                   )
+
+#define DEFAULT_DEBUG_MESSAGE DefaultDebugMessage()
+#define SET_HEAP_MESSAGE(thisStr)	       (setHeapMsg(thisStr))
+#define HEAP_DEBUG_PRINT(thisStr)          (Serial.print  (  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : thisStr ) )
+#define HEAP_DEBUG_PRINTLN(thisStr)        (Serial.println(  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : thisStr ) )
+#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                  )
 #endif
 
 #ifndef HEAP_DEBUG
 static const char *  HEAP_DEBUG_MSG = "";
+#define SET_HEAP_MESSAGE(string)		   ((void)0)
 #define HEAP_DEBUG_PRINT(string)           ((void)0)
 #define HEAP_DEBUG_PRINTF(string)          ((void)0)
 #define HEAP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
+
+ 
+	void setHeapMsg(String str);
+
+	String getHeapMsg();
+
+	String DefaultDebugMessage();
+
+ 
 
 
 #endif // _GLOBALDEFINE_h
