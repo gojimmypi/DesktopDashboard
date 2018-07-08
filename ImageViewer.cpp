@@ -453,7 +453,7 @@ void bmpDrawFromUrlStream(Adafruit_ILI9341 * tftPtr, String imageUrl, int startX
 		if (httpCode == HTTP_CODE_OK) {
 			HEAP_DEBUG_PRINTF("ImageViewer Initial heap size: %u\n", ESP.getFreeHeap());
 
-			// unsigned long DrawTime = millis();
+			unsigned long DrawTime = millis();
 			// get length of document (is -1 when Server sends no Content-Length header)
 			len = http.getSize(); // TODO - this is no longer needed locally
 //			unsigned char tmp;
