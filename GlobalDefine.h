@@ -42,11 +42,6 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 // End user config
 //*******************************************************************************************************************************************
 
-// TODO replace THE_SSL_TYPE with actual type in code was BearSSL confirmed to be functioning properly
-#define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure
-//#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure
-
-#define USE_TLS_SSL // when defined, JSON data will use SSL
 // #define SCREEN_DEBUG // when defined, display low level screen debug info 
 // #define SCREEN_DATA_DEBUG // when defined, print screen data also to serial terminal
 #define JSON_DEBUG // when defined, display JSON debug info 
@@ -57,6 +52,29 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define TIMER_DEBUG // when defined, display diagnostic timer info
 #define HEAP_DEBUG // when defined, display diagnostic heap info
 #define HARDWARE_DEBUG
+
+// TODO replace THE_SSL_TYPE with actual type in code was BearSSL confirmed to be functioning properly
+
+#define USE_TLS_SSL // when defined, JSON data will use SSL
+
+#undef FOUND_BOARD
+#ifdef ARDUINO_ARCH_ESP8266
+#define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure
+//#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure
+#define FOUND_BOARD ESP8266
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+// #define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure not supprted in ESP32 ?
+#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure default
+#define FOUND_BOARD ESP32
+#endif
+
+#ifndef FOUND_BOARD
+#pragma message(Reminder "Error Target hardware not defined !")
+#endif // ! FOUND_BOARD
+
+
 
 // Statements like:
 // #pragma message(Reminder "Fix this problem!")
