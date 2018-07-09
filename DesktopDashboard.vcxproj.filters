@@ -83,6 +83,9 @@
     <ClCompile Include="sslHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GlobalDefine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="doc\Adafruit1601-to-ESP8266-Pinout.png">
@@ -92,6 +95,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="doc\ILI9341-34pin.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="doc\raspberry_pi_piplussch.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
