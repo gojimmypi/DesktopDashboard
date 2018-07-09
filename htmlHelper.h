@@ -30,7 +30,7 @@
 #endif
 
 
-#include <ESP8266WiFi.h>
+// #include <ESP8266WiFi.h>
 #ifdef USE_TLS_SSL
 // #include <WiFiClientSecure.h> // included in <ESP8266WiFi.h>
 #else
