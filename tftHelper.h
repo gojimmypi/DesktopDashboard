@@ -35,24 +35,9 @@
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-	// basic ESP32 board
 	#define TFT_CS 14  // Chip select control pin
 	#define TFT_DC 27  // Data Command control pin
 	#define TFT_RST 33 // Reset pin (could connect to Arduino RESET pin)
-
-	// ESP32-WROVER-KIT-V3
-	// see http://esp-idf.readthedocs.io/en/latest/get-started/get-started-wrover-kit.html#get-started-esp-wrover-lcd-connector
-	//    ESP32 Pin  LCD Signal
-	// 1   GPIO18     RESET
-	// 2   GPIO19     SCL
-	// 3   GPIO21     D / C
-	// 4   GPIO22     CS
-	// 5   GPIO23     SDA
-	// 6   GPIO25     SDO
-	// 7   GPIO5      Backlight
-	//#define TFT_CS 22  // Chip select control pin
-	//#define TFT_DC 21  // Data Command control pin
-	//#define TFT_RST 18 // Reset pin (could connect to Arduino RESET pin)
 
 // Screen
 //#define TFT_LED_PIN 32
