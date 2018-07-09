@@ -4,9 +4,9 @@
 #define _TFTHELPER_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-	#include "arduino.h"
+#include "arduino.h"
 #else
-	#include "WProgram.h"
+#include "WProgram.h"
 #endif
 
 
@@ -29,15 +29,30 @@
 // For the esp shield, these are the default:
 #undef FOUND_BOARD
 #ifdef ARDUINO_ARCH_ESP8266
-	#define TFT_DC 2
-	#define TFT_CS 15
-	#define FOUND_BOARD ESP8266
+#define TFT_DC 2
+#define TFT_CS 15
+#define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-	#define TFT_CS 14  // Chip select control pin
-	#define TFT_DC 27  // Data Command control pin
-	#define TFT_RST 33 // Reset pin (could connect to Arduino RESET pin)
+// basic ESP32 board
+#define TFT_CS 14  // Chip select control pin
+#define TFT_DC 27  // Data Command control pin
+#define TFT_RST 33 // Reset pin (could connect to Arduino RESET pin)
+
+// ESP32-WROVER-KIT-V3
+// see http://esp-idf.readthedocs.io/en/latest/get-started/get-started-wrover-kit.html#get-started-esp-wrover-lcd-connector
+//    ESP32 Pin  LCD Signal
+// 1   GPIO18     RESET
+// 2   GPIO19     SCL
+// 3   GPIO21     D / C
+// 4   GPIO22     CS
+// 5   GPIO23     SDA
+// 6   GPIO25     SDO
+// 7   GPIO5      Backlight
+//#define TFT_CS 22  // Chip select control pin
+//#define TFT_DC 21  // Data Command control pin
+//#define TFT_RST 18 // Reset pin (could connect to Arduino RESET pin)
 
 // Screen
 //#define TFT_LED_PIN 32
@@ -48,7 +63,7 @@
 // above #define TFT_RST_PIN 33
 //#define TFT_MISO_PIN 19
 
-	#define FOUND_BOARD=ESP32
+#define FOUND_BOARD=ESP32
 #endif
 
 #ifndef FOUND_BOARD
@@ -115,4 +130,3 @@ void screenMessage(String message, String messageLine2 = "", String messageLine3
 
 
 #endif
-
