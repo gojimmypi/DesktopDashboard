@@ -16,7 +16,6 @@
 //
 //***************************************************
 #include "GlobalDefine.h"
-#include "FS.h" // ESP8266 file system wrapper
 
 #include "hardwareHelper.h"
 #include "DashboardClient.h"
@@ -52,12 +51,15 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #ifdef ARDUINO_ARCH_ESP8266
   #include <ESP8266HTTPClient.h>
   #include <ESP8266WiFi.h>
-  #define FOUND_BOARD ESP8266
+  #include "FS.h" // ESP8266 file system wrapper
+#define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
   #include <HTTPClient.h>
   #include <WiFi.h>
+  #include "FS.h" // ESP8266 file system wrapper
+  #include "SPIFFS.h" // ESP32 requires SPIFFS.h
   #define FOUND_BOARD ESP32
 #endif
 
@@ -70,12 +72,7 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #endif
 
 
-//
-// #include <ESP8266WiFi.h>
 
-#include <ESP8266HTTPClient.h> // includes WiFiClient.h
-
-#include <ESP8266WiFi.h>
 #ifdef USE_TLS_SSL
 // #include <WiFiClientSecure.h>
 #endif // USE_TLS_SSL
@@ -320,6 +317,11 @@ const int httpPort = 80;
 //}
 
 
+// see https://www.visualmicro.com/page/User-Guide.aspx?doc=Arduino-gdb-In-Brief.html#noopt
+#if _VM_DEBUG
+#pragma GCC optimize ("O0")
+#endif
+
 //*******************************************************************************************************************************************
 // fetchDashboardDataChar
 //*******************************************************************************************************************************************
@@ -437,7 +439,14 @@ void GetDashboardData() {
 	SET_HEAP_MESSAGE("GetDashboardData ");
 	if (!fetchingData && !fetchWaiting && !readyDashboardDataRefresh()) {
 		// HEAP_DEBUG_PRINT("Prestop ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
-		client.stopAll();
+		#ifdef ARDUINO_ARCH_ESP8266
+			client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
+		#endif
+		
+		#ifdef ARDUINO_ARCH_ESP32
+			client.stop(); // flush client (the ESP32 does not seem to have implemented stopAll)
+		#endif
+
 		yield();
 
 		// 
@@ -501,7 +510,16 @@ void GetDashboardData() {
 			Serial.println("creating new client...");
 			THE_SSL_TYPE newClient;
 			client = newClient;
+
+
+#ifdef ARDUINO_ARCH_ESP8266
 			client.setInsecure(); // TODO fix this. Needed for BearSSL
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+			//client.setInsecure(); // not implemented in ESP32
+#endif
+
 			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		}
 		delay(1000);
@@ -512,12 +530,18 @@ void GetDashboardData() {
 			return;
 		}
 
+#ifdef ARDUINO_ARCH_ESP8266
 		if (client.verify(DASHBOARD_HOST_THUMBPRINT, DASHBOARD_HOST)) {
 			Serial.println("GetDashboardData TLS certificate matches");
-		}
+	}
 		else {
 			Serial.println("GetDashboardData TLS certificate doesn't match");
 		}
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+	  // not implemented in ESP32
+#endif
 
 		HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		client.print(httpPayload);
@@ -743,12 +767,36 @@ int setupSPIFFS() {
 	}
 	f.close();
 
+#ifdef ARDUINO_ARCH_ESP8266
 	Dir dir = SPIFFS.openDir("/");
 	while (dir.next()) {
 		Serial.print(dir.fileName());
 		File f = dir.openFile("r");
 		Serial.println(f.size());
 	}
+#endif
+#ifdef ARDUINO_ARCH_ESP32
+	 // see https://github.com/espressif/arduino-esp32/blob/master/libraries/SPIFFS/examples/SPIFFS_Test/SPIFFS_Test.ino
+	File root = SPIFFS.open("/");
+	File file = root.openNextFile();
+	while (file) {
+		if (file.isDirectory()) {
+			Serial.print("  DIR : ");
+			Serial.println(file.name());
+			//if (levels) {
+			//	listDir(fs, file.name(), levels - 1);
+			//}
+		}
+		else {
+			Serial.print("  FILE: ");
+			Serial.print(file.name());
+			Serial.print("\tSIZE: ");
+			Serial.println(file.size());
+		}
+		file = root.openNextFile();
+	}
+#endif
+
 	String fmsg;
 	f = SPIFFS.open("/myFile.txt", "r");
 	if (!f) {
@@ -810,8 +858,16 @@ int setupWiFi() {
 		Serial.println("Successfully connected!");
 	}
 
+#ifdef ARDUINO_ARCH_ESP8266
+	client.setInsecure(); // TODO fix this. Needed for BearSSL
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+						  //client.setInsecure(); // not implemented in ESP32
+#endif
 	// testSSL();
 	HEAP_DEBUG_PRINT("Heap (setupWiFi end); "); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+
 	return 0;
 }
 
@@ -870,7 +926,7 @@ int setupWiFi() {
 void setup() {
 
 	delay(500);
-	Serial.begin(115200);
+	Serial.begin(19200);
 	SET_HEAP_MESSAGE( "mySetup; heap = ");
 	HEAP_DEBUG_PRINTLN("info for (begin)");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
@@ -885,7 +941,6 @@ void setup() {
 	checkFlash();
 	setupSPIFFS();
 	setupWiFi();
-	client.setInsecure(); // TODO fix this. Needed for BearSSL
 
 	timeoutDashboardDataRefresh = millis();
 
@@ -1099,6 +1154,4 @@ void loop(void) {
 	// Serial.println("Updating... \r\n");
 	// showDasbboardImages();
 }
-
-
-
+ 

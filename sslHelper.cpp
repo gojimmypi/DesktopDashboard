@@ -2,13 +2,30 @@
 // 
 // 
 
-#include "sslHelper.h"
 #include "GlobalDefine.h"
+#include "sslHelper.h"
+
+#undef FOUND_BOARD
+#ifdef ARDUINO_ARCH_ESP8266
+#include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
+#define FOUND_BOARD ESP8266
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+#include <HTTPClient.h>
+#include <WiFi.h>
+#define FOUND_BOARD ESP32
+#endif
+
+#ifndef FOUND_BOARD
+#pragma message(Reminder "Error Target hardware not defined !")
+#endif // ! FOUND_BOARD
+
 
 void testSSL() {
 
-	BearSSL::WiFiClientSecure client;
+	THE_SSL_TYPE client;
 
 
 	Serial.println("TestSSL");
@@ -35,13 +52,20 @@ void testSSL() {
 	}
 
 
-	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+#ifdef ARDUINO_ARCH_ESP8266
 	if (client.verify(fingerprint, host)) {
 		Serial.println("TLS certificate matches");
-	}
+}
 	else {
-		Serial.println("TLS certificate doesn't match");
+		Serial.println("TLS client.verify not implemented in ESP32");
 	}
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+	Serial.println("TLS certificate doesn't match");
+#endif
+
+	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	String url = "/repos/esp8266/Arduino/commits/master/status";
