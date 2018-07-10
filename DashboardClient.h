@@ -32,21 +32,21 @@ private:
 
 
 	struct DashboardItem {
-		int itemID = 0;
+		int itemID = 1;
 		int dashboard_id = 0;
 		String validation_key = "";
-		String dashboard_short_summary = "";
-		String dashboard_long_summary = "";
-		String current_value = "";
-		String target_value = "";
-		String current_value_display = "";
-		String units = "";
+		String dashboard_short_summary = "Empty";
+		String dashboard_long_summary = "Empty";
+		String current_value = "Empty";
+		String target_value = "1";
+		String current_value_display = "0";
+		String units = "No data";
 		DashboardItem* next = NULL; // we have a linked list of dashboard items
 	};
-	int itemCount = 0;
+	int itemCount = 1;
 	DashboardItem* headItem = new DashboardItem; // for a great tutorial on linked lists, see https://www.youtube.com/watch?v=o5wJkJJpKtM
 	DashboardItem* thisItem = headItem;
-	DashboardItem* nextItem = headItem;
+	DashboardItem* nextItem = NULL;
 
 public:
 	DashboardClient();
@@ -56,7 +56,8 @@ public:
 	virtual bool available();
 
 	virtual String read(); // when less then zero, read sequantially, pointing to next DashboardItem at position 2
-	virtual String read(int displayLine); // when less then zero, read sequantially, pointing to next DashboardItem at position 2
+
+    virtual String read(int displayLine); // when less then zero, read sequantially, pointing to next DashboardItem at position 2
 
 	virtual void whitespace(char c);
 

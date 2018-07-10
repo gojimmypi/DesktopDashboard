@@ -15,6 +15,7 @@ DashboardClient::DashboardClient() {
 //**************************************************************************************************************
 void DashboardClient::open() {
 	// this is a common syntax, to "open" something for reading
+    // Note there's always at least one item, even if it says there's no data; we have something to display
 	thisItem = headItem; // set our linked list item to the first (header) item
 }
 
@@ -71,7 +72,7 @@ void DashboardClient::whitespace(char c) {
 // 
 //**************************************************************************************************************
 void DashboardClient::startDocument() {
-	itemCount = 0;       // at the beginning, we have no items (other than our header)
+	itemCount = 1;       // at the beginning, we may have no data items (other than our header)
 	thisItem = headItem; // set out linked list to the first (header) item
     //
 	//	Serial.println(" start document");
@@ -81,7 +82,6 @@ void DashboardClient::startDocument() {
 // 
 //**************************************************************************************************************
 void DashboardClient::key(String key) {
-#include <vector>
 	currentKey = String(key);
 	if (key == "dashboard_id") {
 		if (!foundNewObject) {
@@ -101,32 +101,45 @@ void DashboardClient::value(String value) {
 //	Serial.println("value: " + value);
 	if (currentKey == "dashboard_id") {
 		thisDashboardID = value.toInt();
-		//std::vector<int> array;
-		//DashboardItemArray.push_back(thisDashboardID);
-		itemCount++;
+        JSON_DEBUG_PRINT("Looking at item DashboardID = ");
+        JSON_DEBUG_PRINTLN(thisDashboardID);
 		if (thisItem->next == NULL) {
-			JSON_DEBUG_PRINT("Creating item ");
-			JSON_DEBUG_PRINTLN(itemCount);
-			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 			if (ESP.getFreeHeap() > MIN_HEAP_LIMIT) {
-				nextItem = new DashboardItem;
-			}
+                JSON_DEBUG_PRINT("Creating item #");
+                JSON_DEBUG_PRINT(itemCount);
+                JSON_DEBUG_PRINT(" for ID = ");
+                JSON_DEBUG_PRINTLN(thisDashboardID);
+                HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+                nextItem = new DashboardItem;
+                itemCount++;
+                thisItem->itemID = itemCount;
+                thisItem->dashboard_id = thisDashboardID;
+                JSON_DEBUG_PRINTLN("Creating item complete.");
+                thisItem->next = nextItem;
+            }
 			else
 			{
 				HEAP_DEBUG_PRINT("Warning: Low memory detected!");
+                JSON_DEBUG_PRINTLN(" Item not created.");
                 thisItem->dashboard_long_summary = "Low memory";
 				thisItem->dashboard_short_summary = "Low memory";
 				thisItem->current_value_display = (String)ESP.getFreeHeap();
 				thisItem->current_value = (String)ESP.getFreeHeap();
                 thisItem->units = "Bytes Free";
-                nextItem = NULL; // there's no next item when we are out of memory!
+                thisItem->next = NULL; // there's no next item when we are out of memory!
+                nextItem = NULL;
+                this->endObject(); // force end of object
+                this->endDocument(); // end end of document
+                return;
 			}
-			thisItem->next = nextItem;
 		}
-		// else { Serial.println("Item already exists"); }
-		thisItem->itemID = itemCount;
-		thisItem->dashboard_id = thisDashboardID;
-
+		else { 
+            nextItem = thisItem->next;
+            JSON_DEBUG_PRINT("Next item already exists. itemID =");
+            JSON_DEBUG_PRINT(nextItem->itemID);
+            JSON_DEBUG_PRINT("; dashboard id = ");
+            JSON_DEBUG_PRINTLN(nextItem->dashboard_id);
+        }
 	}
 	if (currentKey == "dashboard_short_summary") {
 		thisItem->dashboard_short_summary = value;
@@ -156,7 +169,7 @@ void DashboardClient::endArray() {
 //**************************************************************************************************************
 void DashboardClient::endObject() {
 	foundNewObject = false;
-	thisItem = thisItem->next; // or thisItem = NextItem
+	thisItem = thisItem->next; // or thisItem = NextItem; note that at the end, the next item is Null
 
 	//Serial.print(thisDashboardID);
 	//Serial.println(" end object. ");

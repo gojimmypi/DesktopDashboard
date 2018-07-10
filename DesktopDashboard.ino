@@ -97,6 +97,13 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #include "ImageViewer.h"
 #include "tftHelper.h"           // tft screen printing 
 
+
+unsigned long timeoutDashboardDataRefresh = 0;
+unsigned long timerRefresh = 0;
+const int DATA_REFRESH_INTERVAL = 20000; // how frequently to fetch HTML data
+bool fetchWaiting = false;
+
+
 DashboardClient listener;
 String myMacAddress;
 JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
@@ -370,11 +377,6 @@ void fetchDashboardDataChar(WIFI_CLIENT_CLASS * client, JsonStreamingParser * pa
 		}
 	}
 }
-
-unsigned long timeoutDashboardDataRefresh = 0;
-unsigned long timerRefresh = 0;
-const int DATA_REFRESH_INTERVAL = 10000;
-bool fetchWaiting = false;
 
 bool readyDashboardDataRefresh() {
 #ifdef TIMER_DEBUG
@@ -734,21 +736,21 @@ int setupSPIFFS() {
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	File f = SPIFFS.open("/myFile.txt", "w");
 	if (!f) {
-		Serial.println("file open failed 1");
+        SPIFFS_DEBUG_PRINTLN("SPIFSS File open failed; Formatting...");
 		SPIFFS.format();
 	}
 	else {
-		Serial.println("file open SUCCESS 1");
+        SPIFFS_DEBUG_PRINTLN("file open SUCCESS.");
 	}
 	f.close();
 
 	f = SPIFFS.open("/myFile.txt", "w");
 	if (!f) {
-		Serial.println("file open failed 1.1");
+        SPIFFS_DEBUG_PRINTLN("SPIFSS File open failed.");
 		okSPIFFS = 1;
 	}
 	else {
-		Serial.println("file open SUCCESS 1.1");
+        SPIFFS_DEBUG_PRINTLN("SPIFSS File open SUCCESS. Writing...");
 		f.println("Hello World!");
 	}
 	f.close();
@@ -756,9 +758,9 @@ int setupSPIFFS() {
 #ifdef ARDUINO_ARCH_ESP8266
 	Dir dir = SPIFFS.openDir("/");
 	while (dir.next()) {
-		Serial.print(dir.fileName());
+        SPIFFS_DEBUG_PRINT(dir.fileName());
 		File f = dir.openFile("r");
-		Serial.println(f.size());
+        SPIFFS_DEBUG_PRINTLN(f.size());
 	}
 #endif
 #ifdef ARDUINO_ARCH_ESP32
@@ -767,17 +769,17 @@ int setupSPIFFS() {
 	File file = root.openNextFile();
 	while (file) {
 		if (file.isDirectory()) {
-			Serial.print("  DIR : ");
-			Serial.println(file.name());
+            SPIFFS_DEBUG_PRINT("  DIR : ");
+            SPIFFS_DEBUG_PRINTLN(file.name());
 			//if (levels) {
 			//	listDir(fs, file.name(), levels - 1);
 			//}
 		}
 		else {
-			Serial.print("  FILE: ");
-			Serial.print(file.name());
-			Serial.print("\tSIZE: ");
-			Serial.println(file.size());
+            SPIFFS_DEBUG_PRINT("  FILE: ");
+            SPIFFS_DEBUG_PRINT(file.name());
+            SPIFFS_DEBUG_PRINT("\tSIZE: ");
+            SPIFFS_DEBUG_PRINTLN(file.size());
 		}
 		file = root.openNextFile();
 	}
@@ -786,17 +788,17 @@ int setupSPIFFS() {
 	String fmsg;
 	f = SPIFFS.open("/myFile.txt", "r");
 	if (!f) {
-		Serial.println("file open failed 2");
+        SPIFFS_DEBUG_PRINTLN("file open failed 2");
 	}
 	else {
-		Serial.println("file open SUCCESS 2");
+        SPIFFS_DEBUG_PRINTLN("file open SUCCESS 2");
 		okSPIFFS = 2;
 		fmsg = f.readString();
 	}
-	Serial.println("msg=");
-	Serial.println(fmsg);
+    SPIFFS_DEBUG_PRINT("SPIFFS test read msg=");
+    SPIFFS_DEBUG_PRINTLN(fmsg);
 	f.close();
-	Serial.println("File test done!");
+    SPIFFS_DEBUG_PRINTLN("File test done!");
 	SPIFFS.end();
 	HEAP_DEBUG_PRINT("Heap (after SPIFFS.end)="); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	return okSPIFFS;
