@@ -191,9 +191,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #define DEFAULT_DEBUG_MESSAGE DefaultDebugMessage()
 #define SET_HEAP_MESSAGE(thisStr)	       (setHeapMsg(thisStr))
-#define HEAP_DEBUG_PRINT(thisStr)          (Serial.print  (  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap() ) )
-#define HEAP_DEBUG_PRINTLN(thisStr)        (Serial.println(  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap()) )
-#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                  )
+#define HEAP_DEBUG_PRINT(thisStr)          (Serial.print  (  (DefaultDebugMessage().compareTo(thisStr) == 0) ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap() + "; ") )
+#define HEAP_DEBUG_PRINTLN(thisStr)        (Serial.println(  (DefaultDebugMessage().compareTo(thisStr) == 0) ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap() + "; ") )
+#define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t) )
 #endif
 
 #ifndef HEAP_DEBUG
