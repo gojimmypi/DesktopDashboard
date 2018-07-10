@@ -105,3 +105,8 @@ const String THINGSPEAK_API_READ_KEY = "value";
 More coming soon... (dev)
 
 * Note that wunderground is no longer giving away. See [this link](https://twitter.com/thingpulse/status/1006419150057689089)
+
+Resources:
+
+2.8" PiTFT Plus Schematic & Layout
+https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/downloads
