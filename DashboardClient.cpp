@@ -103,6 +103,10 @@ void DashboardClient::value(String value) {
 		thisDashboardID = value.toInt();
         JSON_DEBUG_PRINT("Looking at item DashboardID = ");
         JSON_DEBUG_PRINTLN(thisDashboardID);
+        if (thisItem == NULL) {
+            JSON_DEBUG_PRINT("ERROR: thisItem is null!");
+            return; 
+        }
 		if (thisItem->next == NULL) {
 			if (ESP.getFreeHeap() > MIN_HEAP_LIMIT) {
                 JSON_DEBUG_PRINT("Creating item #");
@@ -141,6 +145,8 @@ void DashboardClient::value(String value) {
             JSON_DEBUG_PRINTLN(nextItem->dashboard_id);
         }
 	}
+    JSON_DEBUG_PRINT("Checking currentKey =");
+    JSON_DEBUG_PRINTLN(currentKey);
 	if (currentKey == "dashboard_short_summary") {
 		thisItem->dashboard_short_summary = value;
 	}
