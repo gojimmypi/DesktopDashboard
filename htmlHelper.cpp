@@ -237,33 +237,60 @@ void getHeaderValue(String keyWord, String str, String& OutValue) {
 //                  4 out of memory (rare, but perhaps already running low on memory or unusually large header)
 //                  5 content too large to load (would be out of memory if content attempted to load)
 //                  6 myClient is NULL
+//                  7 WiFi not connected
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	Serial.println(">>>> htmlSend");
-	if (myClient == NULL) {
+    HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+    HEAP_DEBUG_PRINT("Memory free heap: ");
+    HEAP_DEBUG_PRINTLN("Memory free heap: ");
+    Serial.println(">>>> SET_HEAP_MESSAGE");
+    SET_HEAP_MESSAGE("htmlSend: ");
+    HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+    HEAP_DEBUG_PRINT("Memory free heap: ");
+    HEAP_DEBUG_PRINTLN("Memory free heap: ");
+
+    Serial.println(">>>> htmlSend end heap test");
+    int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
+    String thisResponse; thisResponse = "";
+    String thisResponseHeader; thisResponseHeader = "";
+
+    Serial.printf("Connection status: %d\n", WiFi.status()); // TODO abort if no WiFi
+
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Error: htmlSend called when not connected to WiFi!");
+        return 7;
+    }
+
+    if (myClient == NULL) {
 		Serial.println("Error: myClient not initialized!");
 		return 6;
 	}
-	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
-	String thisResponse; thisResponse = "";
-	String thisResponseHeader; thisResponseHeader = "";
 
-#ifdef HTTP_DEBUG
-	Serial.println(DEBUG_SEPARATOR);
-	Serial.print("Connecting to ");
-	Serial.print(thisHost); // e.g. www.google.com, no http, no path, just dns name
-	Serial.print("; port ");
-	Serial.println(thisPort);
-	Serial.println(DEBUG_SEPARATOR);
-#endif
 
-	if (!myClient->connect(thisHost, thisPort)) {
-#ifdef HTTP_DEBUG
+    yield();
+    Serial.println("Connecting to port 80");
+    if (!myClient->connect(thisHost, 80)) {
+        Serial.println("SUCCESS! Connecting to port 80");
+    }
+    else {
+        Serial.println("FAILED! Connecting to port 80");
+    }
+
+    yield();
+
+    HTTP_DEBUG_PRINTLN(DEBUG_SEPARATOR);
+    HTTP_DEBUG_PRINT("Connecting to ");
+    HTTP_DEBUG_PRINT(thisHost); // e.g. www.google.com, no http, no path, just dns name
+    HTTP_DEBUG_PRINT("; port ");
+    HTTP_DEBUG_PRINTLN(thisPort);
+    HTTP_DEBUG_PRINTLN(DEBUG_SEPARATOR);
+    
+    if (!myClient->connect(thisHost, thisPort)) {
 		Serial.println("htmlSend connection failed, trying htmlSendPlainText");
-#endif
 		return htmlSendPlainText(thisHost, sendHeader);
 	}
-
+   
 #ifdef HTTP_DEBUG
 	Serial.println("Sending HTML: ");
 	Serial.println(DEBUG_SEPARATOR);
@@ -899,8 +926,8 @@ int confirmedInternetConnectivity(const char* host) {
 	int connectionStatus = htmlSend(host, 80, htmlString);
 #endif
 	if (connectionStatus == 0) {
-		Serial.println("Connected to internet!");
-	}
+        Serial.println("\r\n Connected to internet! \r\n");
+    }
 	else if (connectionStatus == 1) {
 		Serial.println("Accepting Terms and Conditions...");
 
