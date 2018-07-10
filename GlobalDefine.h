@@ -52,6 +52,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define TIMER_DEBUG // when defined, display diagnostic timer info
 #define HEAP_DEBUG // when defined, display diagnostic heap info
 #define HARDWARE_DEBUG
+#define SPIFFS_DEBUG
 
 // TODO replace WIFI_CLIENT_CLASS with actual type in code was BearSSL confirmed to be functioning properly
 
@@ -101,10 +102,11 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define Reminder __FILE__ "(" $Line ") : Reminder: "
 
 // static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
-												//static String DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
-												//********************************************************
-												// some optional Serial.print() statements...
-												//********************************************************
+// static String DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
+
+//********************************************************
+// some optional Serial.print() statements...
+//********************************************************
 #ifdef WIFI_DEBUG
 #define WIFI_DEBUG_PRINT(string)           (Serial.print(string))
 #define WIFI_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -115,7 +117,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define WIFI_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-												//********************************************************
+//********************************************************
 #ifdef HTTP_DEBUG
 #define HTTP_DEBUG_PRINT(string)           (Serial.print(string))
 #define HTTP_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -125,8 +127,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define HTTP_DEBUG_PRINT(string)           ((void)0)
 #define HTTP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
+//********************************************************
 
-												//********************************************************
+//********************************************************
 #ifdef SCREEN_DEBUG
 #define SCREEN_DEBUG_PRINT(string)         (Serial.print(string))
 #define SCREEN_DEBUG_PRINTLN(string)       (Serial.println(string))
@@ -137,7 +140,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define SCREEN_DEBUG_PRINTLN(string)       ((void)0)
 #endif
 
-												//********************************************************
+//********************************************************
+
+//********************************************************
 #ifdef SCREEN_DATA_DEBUG
 #define SCREEN_DATA_DEBUG_PRINT(string)    (Serial.print(string))
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  (Serial.println(string))
@@ -148,7 +153,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  ((void)0)
 #endif
 
-												//********************************************************
+//********************************************************
+
+//********************************************************
 #ifdef JSON_DEBUG
 #define JSON_DEBUG_PRINT(string)           (Serial.print(string))
 #define JSON_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -159,7 +166,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define JSON_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-												//********************************************************
+//********************************************************
+
+//********************************************************
 #ifdef TIMER_DEBUG
 #define TIMER_DEBUG_PRINT(string)           (Serial.print(string))
 #define TIMER_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -170,7 +179,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define TIMER_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-												//********************************************************
+//********************************************************
+
+//********************************************************
 #ifdef HEAP_DEBUG
 
 //static char * HEAP_DEBUG_MSG = "Heap = ";
@@ -180,8 +191,8 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #define DEFAULT_DEBUG_MESSAGE DefaultDebugMessage()
 #define SET_HEAP_MESSAGE(thisStr)	       (setHeapMsg(thisStr))
-#define HEAP_DEBUG_PRINT(thisStr)          (Serial.print  (  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : thisStr ) )
-#define HEAP_DEBUG_PRINTLN(thisStr)        (Serial.println(  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : thisStr ) )
+#define HEAP_DEBUG_PRINT(thisStr)          (Serial.print  (  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap() ) )
+#define HEAP_DEBUG_PRINTLN(thisStr)        (Serial.println(  DefaultDebugMessage().compareTo(thisStr)  ? (getHeapMsg() + (String)ESP.getFreeHeap()) : (String)thisStr + " Heap = " + (String)ESP.getFreeHeap()) )
 #define HEAP_DEBUG_PRINTF(string,uint32_t) (Serial.printf (  string,uint32_t)                                                  )
 #endif
 
@@ -193,8 +204,23 @@ static const char *  HEAP_DEBUG_MSG = "";
 #define HEAP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
- 
-	void setHeapMsg(String str);
+//********************************************************
+
+//********************************************************
+#ifdef SPIFFS_DEBUG
+#define SPIFFS_DEBUG_PRINT(string)           (Serial.print(string))
+#define SPIFFS_DEBUG_PRINTLN(string)         (Serial.println(string))
+#endif
+
+#ifndef SPIFFS_DEBUG
+#define SPIFFS_DEBUG_PRINT(string)           ((void)0)
+#define SPIFFS_DEBUG_PRINTLN(string)         ((void)0)
+#endif
+//********************************************************
+
+//********************************************************
+
+    void setHeapMsg(String str);
 
 	String getHeapMsg();
 
