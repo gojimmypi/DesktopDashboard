@@ -72,23 +72,15 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #endif
 
 
-
-#ifdef USE_TLS_SSL
-// #include <WiFiClientSecure.h>
-#endif // USE_TLS_SSL
-
-
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
 #include "FreeSansBold24pt7b.h"  // Adafruit_ILI9341.h is needed; copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
-
-#include "sslHelper.h"
-
 #include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
 #include "JsonListener.h"
 
+#include "sslHelper.h"
 #include "WiFiHelper.h"
 #include "htmlHelper.h"          // htmlHelper files copied to this project from https://github.com/gojimmypi/VisitorWiFi-ESP8266
 
@@ -109,13 +101,11 @@ DashboardClient listener;
 String myMacAddress;
 JsonStreamingParser parser; // note the parser can only be used once! (TODO - consider implementing some sort of re-init)
 
+WIFI_CLIENT_CLASS  client;
+
 #ifdef USE_TLS_SSL
-THE_SSL_TYPE  client;
-//WiFiClientSecure client;
 const int httpPort = 443;
-// Serial.println("Using WiFiClientSecure!");
 #else
-WiFiClient client;
 const int httpPort = 80;
 #endif
 
@@ -123,7 +113,7 @@ const int httpPort = 80;
 
 
 //#ifdef USE_TLS_SSL
-//void fetchDashboardData(THE_SSL_TYPE * client, JsonStreamingParser * parser) {
+//void fetchDashboardData(WIFI_CLIENT_CLASS * client, JsonStreamingParser * parser) {
 //	Serial.println("Using WiFiClientSecure!");
 //#else
 //void fetchDashboardData(WiFiClient * client, JsonStreamingParser * parser) {
@@ -332,11 +322,7 @@ int size = 0;
 
 
 //*******************************************************************************************************************************************
-#ifdef USE_TLS_SSL
-void fetchDashboardDataChar(THE_SSL_TYPE * client, JsonStreamingParser * parser) {
-#else
-void fetchDashboardDataChar(WiFiClient * client, JsonStreamingParser * parser) {
-#endif
+void fetchDashboardDataChar(WIFI_CLIENT_CLASS * client, JsonStreamingParser * parser) {
 //*******************************************************************************************************************************************
 	char c;
 	client->setNoDelay(false);
@@ -455,7 +441,7 @@ void GetDashboardData() {
 		tcpCleanup();
 
 		// client == NULL;
-		 //THE_SSL_TYPE newClient;
+		 //WIFI_CLIENT_CLASS newClient;
 		 //client = newClient;
 		 //client.setInsecure(); // TODO fix this. Needed for BearSSL
 		// HEAP_DEBUG_PRINT("Reassign ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
@@ -508,7 +494,7 @@ void GetDashboardData() {
 		if (client == NULL) {
 			HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 			Serial.println("creating new client...");
-			THE_SSL_TYPE newClient;
+			WIFI_CLIENT_CLASS newClient;
 			client = newClient;
 
 

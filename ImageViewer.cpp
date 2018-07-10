@@ -75,10 +75,6 @@ int ah2i(uint8_t s)
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
-#ifdef USE_TLS_SSL
-#else
-#endif
-
 uint16_t read16(WiFiClient * f) {
 
 	uint16_t result;
@@ -90,9 +86,7 @@ uint16_t read16(WiFiClient * f) {
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
-#ifdef USE_TLS_SSL
-#else
-#endif
+
 uint32_t read32(WiFiClient * f) {
 	uint32_t result;
 	((uint8_t *)&result)[0] = f->read(); // LSB
@@ -129,9 +123,6 @@ uint32_t read32(unsigned char * d, int fromIndex) {
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
-#ifdef USE_TLS_SSL
-#else
-#endif
 unsigned char* bmpRawReader(WiFiClient * f) {
 	// based on code from http://stackoverflow.com/questions/9296059/read-pixel-value-in-bmp-file
 	uint8_t info[54];
@@ -1203,7 +1194,7 @@ void bmpDraw(Adafruit_ILI9341 * tftPtr, char * imagePath)
 //}
 //
 
-void dldDImage(Adafruit_ILI9341 * tftPtr, uint16_t  xloc, uint16_t yloc) {
+void oldDImage(Adafruit_ILI9341 * tftPtr, uint16_t  xloc, uint16_t yloc) {
 	// this is the old, "load it all into memory first" method. Use bmpDrawFromUrlStream instead
 	uint16_t  r;
 	uint8_t hb, lb, cv, lv1 = 0, lv2 = 0, cb1, cb2;

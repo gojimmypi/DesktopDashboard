@@ -69,11 +69,7 @@ const String CrLf = "\n\r";
 
 
 const int MAX_CONNECTION_TIMEOUT_MILLISECONDS = 8000;
-#ifdef USE_TLS_SSL
-THE_SSL_TYPE* myClient = NULL;
-#else
-WiFiClient* myClient = NULL;
-#endif
+WIFI_CLIENT_CLASS* myClient = NULL; // note this may be one of several different class types depending on architecture and security setting
 
 
 
@@ -81,31 +77,17 @@ int htmlHelper::Send() {
 	return htmlSend(thisHost, thisPort, sendHeader); //const char* thisHost, int thisPort, String sendHeader
 }
 
-#ifdef USE_TLS_SSL
-htmlHelper::htmlHelper(THE_SSL_TYPE* thisClient, const char* Host, int Port) {
+htmlHelper::htmlHelper(WIFI_CLIENT_CLASS* thisClient, const char* Host, int Port) {
 	myClient = thisClient;
 	thisHost = Host;
 	thisPort = Port;
 }
 
 // helper with initial HTML header to send
-htmlHelper::htmlHelper(THE_SSL_TYPE* thisClient, const char* Host, int Port, String Header) {
+htmlHelper::htmlHelper(WIFI_CLIENT_CLASS* thisClient, const char* Host, int Port, String Header) {
 	htmlHelper(thisClient, Host, Port);
 	sendHeader = Header;
 }
-#else
-htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port) {
-	myClient = thisClient;
-	thisHost = Host;
-	thisPort = Port;
-}
-
-// helper with initial HTML header to send
-htmlHelper::htmlHelper(WiFiClient* thisClient, const char* Host, int Port, String Header) {
-	htmlHelper(thisClient, Host, Port);
-	sendHeader = Header;
-}
-#endif
 
 // basic helper
 htmlHelper::htmlHelper() {
@@ -257,12 +239,6 @@ void getHeaderValue(String keyWord, String str, String& OutValue) {
 //                  6 myClient is NULL
 //**************************************************************************************************************
 int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
-//#ifdef USE_TLS_SSL
-//	WiFiClient client;
-////	WiFiClientSecure client; // TODO WiFiClientSecure
-//#else
-//	WiFiClient client;
-//#endif
 	Serial.println(">>>> htmlSend");
 	if (myClient == NULL) {
 		Serial.println("Error: myClient not initialized!");
@@ -479,37 +455,21 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 //#endif
 
 }
-#ifdef USE_TLS_SSL
-int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort) {
+int htmlSend(WIFI_CLIENT_CLASS* thisClient, const char* thisHost, int thisPort) {
 	myClient = thisClient;
 	return htmlSend(thisHost, thisPort,"");
 }
-int htmlSend(THE_SSL_TYPE* thisClient, const char* thisHost, int thisPort, String sendHeader) {
+int htmlSend(WIFI_CLIENT_CLASS* thisClient, const char* thisHost, int thisPort, String sendHeader) {
 	myClient = thisClient;
 	return htmlSend(thisHost, thisPort, sendHeader);
 }
-#else
-int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort) {
-	myClient = thisClient;
-	htmlSend(thisHost, thisPort, "");
-}
-int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader) {
-	myClient = thisClient;
-	htmlSend(thisHost, thisPort, sendHeader);
-}
-#endif
 
 
 int htmlSendPlainText(const char* thisHost, String sendHeader) {
 	int thisPort = 80;
-	WiFiClient OtherClient;
-	//#ifdef USE_TLS_SSL
-	//	WiFiClient client;
-	////	WiFiClientSecure client; // TODO WiFiClientSecure
-	//#else
-	//	WiFiClient client;
-	//#endif
-	Serial.println(">>>> htmlSendPlainText");
+	WiFiClient OtherClient; // note regardless of default client, we create another please text, non-secure client here
+
+    Serial.println(">>>> htmlSendPlainText");
 
 	int countReadResponseAttempts = 5; // this a is a somewhat arbitrary number, mainly to handle large HTML payloads
 	String thisResponse; thisResponse = "";
@@ -728,11 +688,7 @@ int htmlSendPlainText(const char* thisHost, String sendHeader) {
 
 
 
-#ifdef USE_TLS_SSL
-void htmlSetClient(THE_SSL_TYPE* thisClient) {
-#else
-void htmlSetClient(WiFiClient* thisClient) {
-#endif
+void htmlSetClient(WIFI_CLIENT_CLASS* thisClient) {
 	myClient = thisClient;
 }
 

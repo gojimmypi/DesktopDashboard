@@ -25,7 +25,7 @@
 
 void testSSL() {
 
-	THE_SSL_TYPE client;
+	WIFI_CLIENT_CLASS client;
 
 
 	Serial.println("TestSSL");
