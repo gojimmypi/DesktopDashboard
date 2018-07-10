@@ -53,20 +53,28 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define HEAP_DEBUG // when defined, display diagnostic heap info
 #define HARDWARE_DEBUG
 
-// TODO replace THE_SSL_TYPE with actual type in code was BearSSL confirmed to be functioning properly
+// TODO replace WIFI_CLIENT_CLASS with actual type in code was BearSSL confirmed to be functioning properly
 
 #define USE_TLS_SSL // when defined, JSON data will use SSL
+#define WIFI_CLIENT_CLASS WiFiClient  // the name of the WiFi class may vary depending on (1) architecture and (2) using TLS or not
 
 #undef FOUND_BOARD
 #ifdef ARDUINO_ARCH_ESP8266
-#define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure
-//#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure
-#define FOUND_BOARD ESP8266
+    #undef  WIFI_CLIENT_CLASS
+    #ifdef USE_TLS_SSL
+        #define WIFI_CLIENT_CLASS BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure
+    #else
+        #define THE_CLIENT_TYPE WiFiClient // no TLS 
+    #endif // USE_TLS_SSL
+
+    //#define WIFI_CLIENT_CLASS  WiFiClientSecure //  WiFiClientSecure
+    #define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-// #define THE_SSL_TYPE BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure not supprted in ESP32 ?
-#define THE_SSL_TYPE  WiFiClientSecure //  WiFiClientSecure default
+// #define WIFI_CLIENT_CLASS BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure not supprted in ESP32 ?
+#undef  WIFI_CLIENT_CLASS
+#define WIFI_CLIENT_CLASS  WiFiClientSecure //  WiFiClientSecure default
 #define FOUND_BOARD ESP32
 #endif
 
