@@ -114,10 +114,12 @@ void DashboardClient::value(String value) {
 			else
 			{
 				HEAP_DEBUG_PRINT("Warning: Low memory detected!");
+                thisItem->dashboard_long_summary = "Low memory";
 				thisItem->dashboard_short_summary = "Low memory";
 				thisItem->current_value_display = (String)ESP.getFreeHeap();
 				thisItem->current_value = (String)ESP.getFreeHeap();
-				nextItem = NULL; // there's no next item when we are out of memory!
+                thisItem->units = "Bytes Free";
+                nextItem = NULL; // there's no next item when we are out of memory!
 			}
 			thisItem->next = nextItem;
 		}
