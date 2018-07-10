@@ -5,4 +5,6 @@
 
 int wifiConnect(int maxAttempts = 50);
 
+String wifiMacAddress();
+
 #endif

@@ -25,7 +25,11 @@
 
 #include "tftHelper.h"
 
+String myMacAddress;
 
+String wifiMacAddress() {
+    return myMacAddress;
+}
 
 //*******************************************************************************************************************************************
 // wifiConnect 
@@ -46,7 +50,6 @@ int wifiConnect(int maxAttempts) {
 	WiFi.begin(WIFI_SSID, WIFI_PWD);
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
-	String myMacAddress;
 	myMacAddress = WiFi.macAddress(); // this returns 6 hex bytes, delimited by colons
 	screenMessage("MAC Address", myMacAddress.substring(0, 9), myMacAddress.substring(9, 18)); // 01:34:67:90:12:45
 
