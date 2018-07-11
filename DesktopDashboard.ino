@@ -513,9 +513,9 @@ void GetDashboardData() {
 		delay(1000);
         Serial.println("client.connect");
 		if (!client.connect(DASHBOARD_HOST, httpPort)) {
-			Serial.println("connection failed; need to implement wait clear");
+			Serial.println("connection failed; need to implement wait clear"); // TODO 
 			Serial.println("");
-			fetchWaiting = true;
+			fetchWaiting = true; // TODO does this even do anything once set?
 			return;
 		}
 
