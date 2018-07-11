@@ -3,6 +3,7 @@
 #ifndef _GLOBALDEFINE_h
 #define _GLOBALDEFINE_h
 
+// arduino.h allows some handy types, such as String
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "arduino.h"
 #else
@@ -10,7 +11,7 @@
 #endif
 
 
-//*******************************************************************************************************************************************
+//*************************************************************************************************************************************************************************************************
 // Begin user config
 //*******************************************************************************************************************************************
 // My config is stored in myPrivateSettings.h file 
@@ -38,13 +39,18 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 // we will fetch data from a JSON file called http://mydashboardhost.com/theDataPath/XYZZYMMAABBCCDDEEFF
 // where MMAABBCCDDEEFF is this device's HEX MAC Address, with no spaces, dashes, or commas
 #endif
-//*******************************************************************************************************************************************
+//**************************************************************************************************************
+//**************************************************************************************************************
 // End user config
-//*******************************************************************************************************************************************
+//**************************************************************************************************************
+//**************************************************************************************************************
 
+//**************************************************************************************************************
+// debugging options
+//**************************************************************************************************************
 // #define SCREEN_DEBUG // when defined, display low level screen debug info 
 // #define SCREEN_DATA_DEBUG // when defined, print screen data also to serial terminal
-#define JSON_DEBUG // when defined, display JSON debug info 
+// #define JSON_DEBUG // when defined, display JSON debug info 
 #define WIFI_DEBUG // when defined, display WiFi debug info 
 #define SERIAL_SCREEN_DEBUG // when defined, display screen messages to serial port
 #define HTTP_DEBUG // when defined, display WiFi debug info 
@@ -52,10 +58,11 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define TIMER_DEBUG // when defined, display diagnostic timer info
 #define HEAP_DEBUG // when defined, display diagnostic heap info
 #define HARDWARE_DEBUG
-#define SPIFFS_DEBUG
+// #define SPIFFS_DEBUG
 
-// TODO replace WIFI_CLIENT_CLASS with actual type in code was BearSSL confirmed to be functioning properly
-
+//**************************************************************************************************************
+// board-architecture-dependent WIFI_CLIENT_CLASS type selector 
+//**************************************************************************************************************
 #define USE_TLS_SSL // when defined, JSON data will use SSL
 #define WIFI_CLIENT_CLASS WiFiClient  // the name of the WiFi class may vary depending on (1) architecture and (2) using TLS or not
 
@@ -74,16 +81,23 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 
 #ifdef ARDUINO_ARCH_ESP32
 // #define WIFI_CLIENT_CLASS BearSSL::WiFiClientSecure // BearSSL :: WiFiClientSecure not supprted in ESP32 ?
-#undef  WIFI_CLIENT_CLASS
-#define WIFI_CLIENT_CLASS  WiFiClientSecure //  WiFiClientSecure default
-#define FOUND_BOARD ESP32
+    #undef  WIFI_CLIENT_CLASS
+    #ifdef USE_TLS_SSL
+        #define WIFI_CLIENT_CLASS  WiFiClientSecure //  WiFiClientSecure default
+    #else
+        #define THE_CLIENT_TYPE WiFiClient // no TLS 
+    #endif // USE_TLS_SSL
+    #define FOUND_BOARD ESP32
 #endif
 
 #ifndef FOUND_BOARD
-#pragma message(Reminder "Error Target hardware not defined !")
+#pragma message(Reminder "Error Target hardware not defined! (currently only supporting ESP32 and ESP8266)")
 #endif // ! FOUND_BOARD
 
 
+//**************************************************************************************************************
+//
+//**************************************************************************************************************
 
 // Statements like:
 // #pragma message(Reminder "Fix this problem!")
@@ -101,12 +115,10 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define $Line MakeString( Stringize, __LINE__ )
 #define Reminder __FILE__ "(" $Line ") : Reminder: "
 
-// static const char * DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
-// static String DEFAULT_DEBUG_MESSAGE = ""; // when using the default (this empty string), the respective debug message will use the default text
 
-//********************************************************
+//**************************************************************************************************************
 // some optional Serial.print() statements...
-//********************************************************
+//**************************************************************************************************************
 #ifdef WIFI_DEBUG
 #define WIFI_DEBUG_PRINT(string)           (Serial.print(string))
 #define WIFI_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -117,7 +129,7 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define WIFI_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef HTTP_DEBUG
 #define HTTP_DEBUG_PRINT(string)           (Serial.print(string))
 #define HTTP_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -127,9 +139,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define HTTP_DEBUG_PRINT(string)           ((void)0)
 #define HTTP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef SCREEN_DEBUG
 #define SCREEN_DEBUG_PRINT(string)         (Serial.print(string))
 #define SCREEN_DEBUG_PRINTLN(string)       (Serial.println(string))
@@ -140,9 +152,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define SCREEN_DEBUG_PRINTLN(string)       ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef SCREEN_DATA_DEBUG
 #define SCREEN_DATA_DEBUG_PRINT(string)    (Serial.print(string))
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  (Serial.println(string))
@@ -153,9 +165,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define SCREEN_DATA_DEBUG_PRINTLN(string)  ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef JSON_DEBUG
 #define JSON_DEBUG_PRINT(string)           (Serial.print(string))
 #define JSON_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -166,9 +178,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define JSON_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef TIMER_DEBUG
 #define TIMER_DEBUG_PRINT(string)           (Serial.print(string))
 #define TIMER_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -179,9 +191,9 @@ static const char* DASHBOARD_HOST_THUMBPRINT = "35 85 74 EF 67 35 A7 CE 40 69 50
 #define TIMER_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef HEAP_DEBUG
 
 //static char * HEAP_DEBUG_MSG = "Heap = ";
@@ -204,9 +216,9 @@ static const char *  HEAP_DEBUG_MSG = "";
 #define HEAP_DEBUG_PRINTLN(string)         ((void)0)
 #endif
 
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 #ifdef SPIFFS_DEBUG
 #define SPIFFS_DEBUG_PRINT(string)           (Serial.print(string))
 #define SPIFFS_DEBUG_PRINTLN(string)         (Serial.println(string))
@@ -216,9 +228,9 @@ static const char *  HEAP_DEBUG_MSG = "";
 #define SPIFFS_DEBUG_PRINT(string)           ((void)0)
 #define SPIFFS_DEBUG_PRINTLN(string)         ((void)0)
 #endif
-//********************************************************
+//**************************************************************************************************************
 
-//********************************************************
+//**************************************************************************************************************
 
     void setHeapMsg(String str);
 
