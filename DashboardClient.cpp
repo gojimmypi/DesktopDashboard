@@ -132,8 +132,8 @@ void DashboardClient::value(String value) {
                 thisItem->units = "Bytes Free";
                 thisItem->next = NULL; // there's no next item when we are out of memory!
                 nextItem = NULL;
-                this->endObject(); // force end of object
-                this->endDocument(); // end end of document
+                //this->endObject(); // force end of object
+                //this->endDocument(); // end end of document
                 return;
 			}
 		}
@@ -145,8 +145,8 @@ void DashboardClient::value(String value) {
             JSON_DEBUG_PRINTLN(nextItem->dashboard_id);
         }
 	}
-    JSON_DEBUG_PRINT("Checking currentKey =");
-    JSON_DEBUG_PRINTLN(currentKey);
+    //JSON_DEBUG_PRINT("Checking currentKey =");
+    //JSON_DEBUG_PRINTLN(currentKey);
 	if (currentKey == "dashboard_short_summary") {
 		thisItem->dashboard_short_summary = value;
 	}
