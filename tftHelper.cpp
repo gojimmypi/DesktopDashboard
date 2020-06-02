@@ -9,6 +9,12 @@ Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
 
 typedef signed short int16_t; // apparently we need to manually define this to appease tft.getTextBounds
 
+bool _tftIsInitialized = false;
+
+bool tftIsInitialized() {
+	return _tftIsInitialized;
+}
+
 
 //*******************************************************************************************************************************************
 // 
@@ -75,6 +81,7 @@ void tftScreenClear() {
 //*******************************************************************************************************************************************
 void tftScreenDiagnostics() {
 	// read diagnostics (optional but can help debug problems)
+	if (tftIsInitialized()) {
 #ifdef TFT_DEBUG
 	uint8_t x = tft.readcommand8(ILI9341_RDMODE);
 	Serial.print("Display Power Mode: 0x"); Serial.println(x, HEX); // success =  0x9C
@@ -87,23 +94,60 @@ void tftScreenDiagnostics() {
 	x = tft.readcommand8(ILI9341_RDSELFDIAG);
 	Serial.print("Self Diagnostic: 0x"); Serial.println(x, HEX); // Success =  0x0
 #endif
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
 }
 
 //*******************************************************************************************************************************************
 //  screenMessage   (setRotation = 3)
 //*******************************************************************************************************************************************
 void screenMessage(String message, String messageLine2, String messageLine3) {
-	tftScreenClear();
-	tft.setRotation(3);
-	tft.setCursor(0, 36);
-	tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-	tft.println(message);
-	if (messageLine2 > "") { tft.println(messageLine2); }
-	if (messageLine3 > "") { tft.println(messageLine3); }
+	if (tftIsInitialized()) {
+		tftScreenClear();
+		tft.setRotation(3);
+		tft.setCursor(0, 36);
+		tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+		tft.println(message);
+		if (messageLine2 > "") { tft.println(messageLine2); }
+		if (messageLine3 > "") { tft.println(messageLine3); }
 
 #ifdef SERIAL_SCREEN_DEBUG
-	Serial.println(message);
-	if (messageLine2 > "") { Serial.println(messageLine2); }
-	if (messageLine3 > "") { Serial.println(messageLine3); }
+		Serial.println(message);
+		if (messageLine2 > "") { Serial.println(messageLine2); }
+		if (messageLine3 > "") { Serial.println(messageLine3); }
 #endif
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
+}
+
+
+//*******************************************************************************************************************************************
+// setupDisplay
+//*******************************************************************************************************************************************
+int setupDisplay() {
+	Serial.println("ILI9341 Test!");
+	tft.begin();
+	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
+	_tftIsInitialized = true;
+	tftScreenDiagnostics();
+
+
+	delay(20);
+	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
+	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
+
+	delay(20);
+	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
+	delay(20);
+
+	tft.setCursor(1, 1);
+	tftScreenDiagnostics();
+	Serial.print("Display init:");
+	Serial.println(tftIsInitialized());
+	screenMessage("Startup...");
+	return 0;
 }

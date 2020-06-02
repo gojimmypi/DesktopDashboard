@@ -20,6 +20,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
+#include "FreeSansBold24pt7b.h"  // Adafruit_ILI9341.h is needed; copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 
 //// For the Adafruit shield, these are the default.
@@ -82,7 +83,8 @@ void tftPrintlnCentered(String text);
 void tftScreenClear();
 void tftScreenDiagnostics();
 void screenMessage(String message, String messageLine2 = "", String messageLine3 = "");
-
+int setupDisplay();
+bool tftIsInitialized();
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
 // Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
