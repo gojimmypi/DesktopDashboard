@@ -20,6 +20,10 @@
 #include "hardwareHelper.h"
 #include "DashboardClient.h"
 #include "htmlHelper.h"
+#include "timeHelper.h"
+
+
+const String VERSION = "0.02b";
 
 String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on mac address we might determine a user-specific value
 // htmlHelper myHtmlHelper;
@@ -75,7 +79,6 @@ String DasboardDataFile = DASHBOARD_DEFAULT_DATA; // set a default, but based on
 #include "SPI.h"
 #include "Adafruit_GFX.h"        // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit GFX Library 1.1.5
 #include "Adafruit_ILI9341.h"    // setup via Arduino IDE; Sketch - Include Library - Manage Libraries; Adafruit ILI9341
-#include "FreeSansBold24pt7b.h"  // Adafruit_ILI9341.h is needed; copy to project directory from Adafruit-GFX-Library\Fonts; show all files. right-click "include in project"
 
 #include "JsonStreamingParser.h" // this library is already included as local library, but may need to be copied manually from https://github.com/squix78/json-streaming-parser
 #include "JsonListener.h"
@@ -235,7 +238,7 @@ const int httpPort = 80;
 //
 //	if (client.verify(DASHBOARD_HOST_THUMBPRINT, DASHBOARD_HOST)) {
 //		Serial.println("TLS certificate matches");
-//	}
+//	}need to implement wait clear
 //	else {
 //		Serial.println("TLS certificate doesn't match");
 //	}
@@ -387,6 +390,10 @@ bool readyDashboardDataRefresh() {
 		timerRefresh = millis();
 	}
 #endif
+	if (timeoutDashboardDataRefresh > millis()) {
+		Serial.println("  timeoutDashboardDataRefresh value error! Resetting....");
+		timeoutDashboardDataRefresh = millis();
+	}
 	return ((millis() - timeoutDashboardDataRefresh) > DATA_REFRESH_INTERVAL);
 }
 
@@ -425,7 +432,10 @@ void tcpCleanup()
 
 void GetDashboardData() {
 	SET_HEAP_MESSAGE("GetDashboardData ");
-	if (!fetchingData && !fetchWaiting && !readyDashboardDataRefresh()) {
+	if (!fetchingData && fetchWaiting && !readyDashboardDataRefresh()) {
+		Serial.println();
+		Serial.println("  Resetting connection...");
+		Serial.println();
 		// HEAP_DEBUG_PRINT("Prestop ");  HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 		#ifdef ARDUINO_ARCH_ESP8266
 			client.stopAll(); // flush client (only ESP8266 seems to have implemented stopAll)
@@ -512,10 +522,25 @@ void GetDashboardData() {
 		}
 		delay(1000);
         Serial.println("client.connect");
+
+		client.flush();
+		client.stopAll();
+		client.setInsecure();
 		if (!client.connect(DASHBOARD_HOST, httpPort)) {
 			Serial.println("connection failed; need to implement wait clear"); // TODO 
 			Serial.println("");
+			Serial.println("");
+			Serial.print("client status = ");
+			Serial.println(client.status());
+			Serial.print("client available = ");
+			Serial.println(client.available());
+			Serial.print("client getLastSSLError = ");
+			Serial.println(client.getLastSSLError());
+			Serial.print("client getWriteError = ");
+			Serial.println(client.getWriteError());
+			Serial.print("client getWriteError = ");
 			fetchWaiting = true; // TODO does this even do anything once set?
+			fetchingData = false; // if we cannot connect, we are certainly not fetching data!
 			return;
 		}
 
@@ -602,6 +627,7 @@ void GetDashboardData() {
 #ifdef ARDUINO_ARCH_ESP32
 		Serial.print("client.status() not available for ESP32"); // flush client (the ESP32 does not seem to have implemented client.status)
 #endif	
+		tftScreenDiagnostics();
 	}
 	else {
 		fetchDashboardDataChar(&client, &parser);
@@ -621,19 +647,24 @@ String baseURL() {
 void showDasbboardImages() {
 //	Server_Payroll_Hours.png
 //	Server_Payroll_Hours.bmp
-	tftScreenClear();
+	if (tftIsInitialized()) {
+		tftScreenClear();
 
-	tft.setFont(); // reset to default small font when drawing images so that any long error message is readable.
-	tft.setRotation(2);
+		tft.setFont(); // reset to default small font when drawing images so that any long error message is readable.
+		tft.setRotation(2);
 
-	tft.setCursor(1, 1);
-	String thisImage = baseURL() + "imageConvert2BMP.aspx?targetImageName=server_payroll_hours.bmp&newImageSizeX=320";
-	String oldLink = "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320";
+		tft.setCursor(1, 1);
+		String thisImage = baseURL() + "imageConvert2BMP.aspx?targetImageName=server_payroll_hours.bmp&newImageSizeX=320";
+		String oldLink = "http://gojimmypi-test-imageconvert2bmp.azurewebsites.net/default.aspx?targetHttpImage=http://healthagency.slocounty.ca.gov/azm/images/server_payroll_hours.bmp&newImageSizeX=320";
 
-	Serial.print("Drawing: ");
-	Serial.print(thisImage);
-	bmpDrawFromUrlStream(&tft, thisImage, 0, 0);
-	imageViewDelay(); 
+		Serial.print("Drawing: ");
+		Serial.print(thisImage);
+		bmpDrawFromUrlStream(&tft, thisImage, 0, 0);
+		imageViewDelay();
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
 }
 
 //*******************************************************************************************************************************************
@@ -641,14 +672,20 @@ void showDasbboardImages() {
 //*******************************************************************************************************************************************
 void showStartupImage() {
 	// startup image
-	Serial.print("Build string...");
 
-	tft.setRotation(2);
-	String imageURL = "http://" + String(DASHBOARD_HOST) + String(DASHBOARD_APP) + "imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
-	Serial.println(imageURL);
-	bmpDrawFromUrlStream(&tft, imageURL, 0, 0);
+	if (tftIsInitialized()) {
+		Serial.print("Build string...");
 
-	Serial.print("Done with logo");
+		tft.setRotation(2);
+		String imageURL = "http://" + String(DASHBOARD_HOST) + String(DASHBOARD_APP) + "imageConvert2BMP.aspx?targetImageName=logo.png&newImageSizeX=320";
+		Serial.println(imageURL);
+		bmpDrawFromUrlStream(&tft, imageURL, 0, 0);
+
+		Serial.print("Done with logo");
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
 }
 
 
@@ -808,29 +845,26 @@ int setupSPIFFS() {
 	return okSPIFFS;
 }
 
-//*******************************************************************************************************************************************
-// setupDisplay
-//*******************************************************************************************************************************************
-int setupDisplay() {
-    Serial.println("ILI9341 Test!");
-	tft.begin();
-	tft.setFont(&FreeSansBold24pt7b); // load our custom 24pt font
-	tftScreenDiagnostics();
-
-
-	delay(20);
-	uint8_t tx = tft.readcommand8(ILI9341_RDMODE);
-	tx = tft.readcommand8(ILI9341_RDSELFDIAG);
-
-	delay(20);
-	Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
-	delay(20);
-
-	tft.setCursor(1, 1);
-	tftScreenDiagnostics();
-	screenMessage("Startup...");
-	return 0;
+void CheckDisplay() {
+	if (tftIsInitialized()) {
+		uint8_t tx;
+		tx = tft.readcommand8(ILI9341_RDSELFDIAG);
+		delay(20);
+		if (tx != 0xC0) {
+			Serial.print("Self Diagnostic: 0x"); Serial.println(tx, HEX);
+			tftScreenDiagnostics();
+		}
+		if (tx == 0xFF) {
+			Serial.println("Self Diagnostic: 0xFF, restarting!");
+			tft.begin(); // there's no "end", but "begin" will reset and try again
+			delay(1000);
+		}
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
 }
+
 
 //*******************************************************************************************************************************************
 // setupWiFi
@@ -920,13 +954,15 @@ int setupWiFi() {
 #pragma endregion
 #endif
 
+
 //*******************************************************************************************************************************************
 // setup()
 //*******************************************************************************************************************************************
 void setup() {
-
 	delay(500);
-	Serial.begin(19200);
+	Serial.begin(115200);
+	Serial.println("DesktopDashboard" + VERSION);
+	Serial.print("Startup millis() = "); Serial.println(millis());
 	SET_HEAP_MESSAGE( "mySetup; heap = ");
 	HEAP_DEBUG_PRINTLN("info for (begin)");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
@@ -936,11 +972,22 @@ void setup() {
 	HEAP_DEBUG_PRINTLN("");
 	HEAP_DEBUG_PRINTLN("Heap (Setup begin)="); 
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	// it is critical to have the proper time set, for TLS! (certs have valid date ranges!)
+	setupLocalTime();
+
 
 	setupDisplay();
+	Serial.print("Display init:");
+	Serial.println(tftIsInitialized());
 	checkFlash();
+	Serial.print("Display init:");
+	Serial.println(tftIsInitialized());
 	setupSPIFFS();
+	Serial.print("Display init:");
+	Serial.println(tftIsInitialized());
 	setupWiFi();
+	Serial.print("Display init:");
+	Serial.println(tftIsInitialized());
 
 	timeoutDashboardDataRefresh = millis();
 
@@ -948,84 +995,88 @@ void setup() {
 	
 	// UpdateDashboard(); // we do this in the loop only
 
-	Serial.println(F("Setup Done!"));
 	HEAP_DEBUG_PRINT("Heap (setup complete)="); HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 	// #pragma message(Reminder "Fix this problem!")
 	Serial.println(("a" == "b") ? (getHeapMsg() + (String)ESP.getFreeHeap()) : "msg") ;
+	Serial.println(F("Setup Done!"));
 }
 
 //*******************************************************************************************************************************************
 // 
 //*******************************************************************************************************************************************
 void imageTest() {
-	tft.setRotation(2);
-	tft.setCursor(0, 0);
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
-	delay(2000);
-	tftScreenClear();
+	if (tftIsInitialized()) {
+		tft.setRotation(2);
+		tft.setCursor(0, 0);
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320", 50, 50);
+		delay(2000);
+		tftScreenClear();
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=buspirate.png&newImageSizeX=320");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=buspirate.png&newImageSizeX=320");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa1.jpg&newImageSizeX=320");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa1.jpg&newImageSizeX=320");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa2.jpg&newImageSizeX=320");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa2.jpg&newImageSizeX=320");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa3.png&newImageSizeX=320");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=nasa3.png&newImageSizeX=320");
+		delay(2000);
+		tftScreenClear();
 
 
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=IMG_20161109_133054198.jpg&newImageSizeY=240&newImageSizeX=320");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=55");
-	delay(2000);
-	tftScreenClear();
+		bmpDrawFromUrlStream(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=55");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=60");
-	delay(2000);
-	tftScreenClear();
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=60");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=70");
-	delay(2000);
-	tftScreenClear();
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=70");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=80");
-	delay(2000);
-	tftScreenClear();
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=80");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=90");
-	delay(2000);
-	tftScreenClear();
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=90");
+		delay(2000);
+		tftScreenClear();
 
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
-	delay(2000);
-	tftScreenClear();
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/default.aspx?targetImageName=image.png&newImageSizeY=100");
+		delay(2000);
+		tftScreenClear();
 
-	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/256color.bmp");
-	delay(2000);
-	tftScreenClear();
+		tft.setCursor(0, 0);
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/256color.bmp");
+		delay(2000);
+		tftScreenClear();
 
-	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/16color.bmp");
-	delay(2000);
-	tftScreenClear();
+		tft.setCursor(0, 0);
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/16color.bmp");
+		delay(2000);
+		tftScreenClear();
 
-	tft.setCursor(0, 0);
-	bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/mono.bmp");
-	delay(2000);
-	tftScreenClear();
-
+		tft.setCursor(0, 0);
+		bmpDraw(&tft, "http://gojimmypi-dev-imageconvert2bmp.azurewebsites.net/images/mono.bmp");
+		delay(2000);
+		tftScreenClear();
+	}
+	else {
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
+	}
 }
 
 //unsigned long testText() {
@@ -1102,32 +1153,39 @@ unsigned long timeoutDisplayItem = millis();
 //*******************************************************************************************************************************************
 //*******************************************************************************************************************************************
 void UpdateDashboardDisplay() {
-	if (listener.available()) {
-		if (millis() - timeoutDisplayItem > 2000) {
-			yield();
-			tftScreenClear();
-			tft.setRotation(3); // 3 = connector to right, long side down
-			String textItem;
+	if (tftIsInitialized()) {
+		if (listener.available()) {
+			if (millis() - timeoutDisplayItem > 2000) {
+				// CheckDisplay(); // occasionally we've seen the display go "all white". Power cycle seems to resolve. Let's try soft reset, instead.
+				yield();
+				tftScreenClear();
+				tft.setRotation(3); // 3 = connector to right, long side down
+				String textItem;
 
-			tft.setCursor(0, 36);
+				tft.setCursor(0, 36);
 
-			textItem = listener.read();
-			tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
-			tftPrintlnCentered(textItem);//		tft.println(textItem);
+				textItem = listener.read();
+				tft.setTextColor(ILI9341_WHITE); // tft.setTextSize(1);
+				tftPrintlnCentered(textItem);//		tft.println(textItem);
 
-			textItem = listener.read();
-			tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
-			tftPrintlnCentered(textItem);//		tft.println(textItem);
+				textItem = listener.read();
+				tft.setTextColor(ILI9341_YELLOW);// tft.setTextSize(2);
+				tftPrintlnCentered(textItem);//		tft.println(textItem);
 
-			textItem = listener.read();
-			tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
-			tftPrintlnCentered(textItem);//		tft.println(textItem);
-			timeoutDisplayItem = millis();
-			// HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+				textItem = listener.read();
+				tft.setTextColor(ILI9341_RED);   // tft.setTextSize(3);
+				tftPrintlnCentered(textItem);//		tft.println(textItem);
+				timeoutDisplayItem = millis();
+				// HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+			}
+		}
+		else {
+			Serial.println("Start over listener.");
+			listener.open(); // start over
 		}
 	}
 	else {
-		listener.open(); // start over
+		SCREEN_DEBUG_PRINTLN(F("Display not initialized!"));
 	}
 }
 
@@ -1137,6 +1195,8 @@ void UpdateDashboardDisplay() {
 //*******************************************************************************************************************************************
 //*******************************************************************************************************************************************
 unsigned long timeoutConnect = millis();
+
+
 
 void loop(void) {
 	yield();
