@@ -23,8 +23,6 @@
 #endif // ! FOUND_BOARD
 
 
-#include "tftHelper.h"
-
 String myMacAddress;
 
 String wifiMacAddress() {
@@ -51,17 +49,11 @@ int wifiConnect(int maxAttempts) {
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
 	myMacAddress = WiFi.macAddress(); // this returns 6 hex bytes, delimited by colons
-	screenMessage("MAC Address", myMacAddress.substring(0, 9), myMacAddress.substring(9, 18)); // 01:34:67:90:12:45
 
 	WIFI_DEBUG_PRINTLN("Starting WiFi Connection Loop...");
 	while (WiFi.status() != WL_CONNECTED) {  // try to connect wifi for 6 sec then reset
 
 											 // this tft code is not actualy DOING anything yet
-		tft.setTextColor(ILI9341_BLUE);
-		tft.setCursor(15, 195);
-		delay(250);
-		tft.setTextColor(ILI9341_RED);
-		tft.setCursor(15, 195);
 
 		WIFI_DEBUG_PRINT(".");
 		delay(250);
@@ -84,5 +76,6 @@ int wifiConnect(int maxAttempts) {
 
 	Serial.println("MAC Address=" + myMacAddress);
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
+	WIFI_DEBUG_PRINT("wifiConnect: Done! /n/n");
 	return 0;
 }
