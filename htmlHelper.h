@@ -7,26 +7,26 @@
 
 #undef FOUND_BOARD
 #ifdef ARDUINO_ARCH_ESP8266
-	#include <ESP8266HTTPClient.h>
-	#include <ESP8266WiFi.h>
-	#define FOUND_BOARD ESP8266
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+#define FOUND_BOARD ESP8266
 #endif
 
 #ifdef ARDUINO_ARCH_ESP32
-	#include <HTTPClient.h>
-	#include <WiFi.h>
-	#define FOUND_BOARD ESP32
+#include <HTTPClient.h>
+#include <WiFi.h>
+#define FOUND_BOARD ESP32
 #endif
 
 #ifndef FOUND_BOARD
-	#pragma message(Reminder "Error Target hardware not defined !")
+#pragma message(Reminder "Error Target hardware not defined !")
 #endif // ! FOUND_BOARD
 
 
 #if defined(ARDUINO) && ARDUINO >= 100
-	#include "arduino.h"
+#include "arduino.h"
 #else
-	#include "WProgram.h"
+#include "WProgram.h"
 #endif
 
 
@@ -45,7 +45,7 @@ String htmlBasicHeaderText(String verb, const char* host, String);
 //int htmlSend(WiFiClient* thisClient, const char* thisHost, int thisPort, String sendHeader);
 int htmlSend(WIFI_CLIENT_CLASS* thisClient, const char* thisHost, int thisPort);
 int htmlSend(WIFI_CLIENT_CLASS* thisClient, const char* thisHost, int thisPort, String sendHeader);
- 
+
 
 int htmlSend(const char* thisHost, int thisPort, String sendHeader);
 int htmlSendPlainText(const char* thisHost, String sendHeader);
@@ -72,7 +72,7 @@ public:
 	htmlHelper(WIFI_CLIENT_CLASS*, const char*, int, String);
 	htmlHelper(WIFI_CLIENT_CLASS*, const char*, int);
 
-    htmlHelper();
+	htmlHelper();
 	int Send();
 };
 

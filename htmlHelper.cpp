@@ -96,6 +96,8 @@ htmlHelper::htmlHelper() {
 
 bool htmlExists(String targetURL) {
 	HTTPClient http;
+	Serial.print("Calling htmlExists for: ");
+	Serial.println(targetURL);
 	http.begin(targetURL);
 
 	int httpCode = http.GET();
@@ -267,10 +269,20 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 		return 6;
 	}
 
+	Serial.print("client status = ");
+	Serial.println(myClient->status());
+	Serial.print("client available = ");
+	Serial.println(myClient->available());
+	Serial.print("client getLastSSLError = ");
+	Serial.println(myClient->getLastSSLError());
+	Serial.print("client getWriteError = ");
+	Serial.println(myClient->getWriteError());
+	Serial.print("client getWriteError = ");
 
     yield();
     Serial.println("Connecting to port 80");
-    if (!myClient->connect(thisHost, 80)) {
+	myClient->setInsecure();
+	if (!myClient->connect(thisHost, 80)) {
         Serial.println("SUCCESS! Connecting to port 80");
     }
     else {
@@ -278,19 +290,33 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
     }
 
     yield();
-
+	if (thisPort != 80) {
+		Serial.println("Target is not port 80; stopAll...");
+		// myClient->flush();
+		delay(10);
+		myClient->stopAll();
+		delay(20);
+	}
     HTTP_DEBUG_PRINTLN(DEBUG_SEPARATOR);
-    HTTP_DEBUG_PRINT("Connecting to ");
+    HTTP_DEBUG_PRINT("htmlHelper Connecting to ");
     HTTP_DEBUG_PRINT(thisHost); // e.g. www.google.com, no http, no path, just dns name
     HTTP_DEBUG_PRINT("; port ");
     HTTP_DEBUG_PRINTLN(thisPort);
     HTTP_DEBUG_PRINTLN(DEBUG_SEPARATOR);
     
-    if (!myClient->connect(thisHost, thisPort)) {
-		Serial.println("htmlSend connection failed, trying htmlSendPlainText");
+	Serial.println("1");
+	myClient->setInsecure();
+	if (!myClient->connect(thisHost, thisPort)) {
+		Serial.print(thisHost); Serial.print(":"); Serial.print(thisPort);
+		Serial.println(" htmlSend connection failed, flushing and trying htmlSendPlainText...");
+		Serial.println("2");
+		myClient->flush();
+		Serial.println("3");
+		myClient->stopAll();
 		return htmlSendPlainText(thisHost, sendHeader);
 	}
-   
+	Serial.println("4");
+
 #ifdef HTTP_DEBUG
 	Serial.println("Sending HTML: ");
 	Serial.println(DEBUG_SEPARATOR);
@@ -425,7 +451,7 @@ int htmlSend(const char* thisHost, int thisPort, String sendHeader) {
 	if (myDebugLevel >= 2) { // only show the response content for debug level 2 or greater
 		Serial.println("Response Payload Content:");
 		Serial.println(DEBUG_SEPARATOR);
-		Serial.println(thisResponse);
+		//Serial.println(thisResponse);
 		Serial.println(DEBUG_SEPARATOR);
 		Serial.println("");
 	}
@@ -493,8 +519,11 @@ int htmlSend(WIFI_CLIENT_CLASS* thisClient, const char* thisHost, int thisPort, 
 
 
 int htmlSendPlainText(const char* thisHost, String sendHeader) {
+	HEAP_DEBUG_PRINT("Memory free heap: ");	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	int thisPort = 80;
-	WiFiClient OtherClient; // note regardless of default client, we create another please text, non-secure client here
+
+	WiFiClient OtherClient; // note regardless of default client, we create another plain text, non-secure client here
+	HEAP_DEBUG_PRINT("Memory free heap after OtherClient: ");	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 
     Serial.println(">>>> htmlSendPlainText");
 
@@ -510,6 +539,7 @@ int htmlSendPlainText(const char* thisHost, String sendHeader) {
 	Serial.println(thisPort);
 	Serial.println(DEBUG_SEPARATOR);
 #endif
+
 
 	if (!OtherClient.connect(thisHost, thisPort)) {
 #ifdef HTTP_DEBUG
@@ -654,7 +684,7 @@ int htmlSendPlainText(const char* thisHost, String sendHeader) {
 	if (myDebugLevel >= 2) { // only show the response content for debug level 2 or greater
 		Serial.println("Response Payload Content:");
 		Serial.println(DEBUG_SEPARATOR);
-		Serial.println(thisResponse);
+		//Serial.println(thisResponse);
 		Serial.println(DEBUG_SEPARATOR);
 		Serial.println("");
 	}
@@ -895,7 +925,7 @@ int doAcceptTermsAndConditions() {
 //**************************************************************************************************************
 int confirmedInternetConnectivity(const char* host) {
 	// This will send the request to the server
-	setHeapMsg ("confirmedInternetConnectivity: ");
+	setHeapMsg ("start confirmedInternetConnectivity: ");
 	HEAP_DEBUG_PRINTLN(DEFAULT_DEBUG_MESSAGE);
 	String htmlString;
 //	const char* internetHostCheck = "gojimmypi-dev-imageconvert2bmp.azurewebsites.net"; // some well known, reliable internet url (ideally small html payload)
@@ -947,7 +977,7 @@ int confirmedInternetConnectivity(const char* host) {
 		}
 	}
 	else {
-		Serial.println("Error connecting.");
+		Serial.println("Error connecting."); Serial.print("Status = "); Serial.println(connectionStatus);
 		return 1;
 	}
 	Serial.println("confirmedInternetConnectivity - success!");
