@@ -45,6 +45,15 @@ void testSSL() {
 	// WiFiClientSecure client;
 	Serial.print("connecting to ");
 	Serial.println(host);
+
+#ifdef ARDUINO_ARCH_ESP8266
+	client.setInsecure(); // TODO fix this. Needed for BearSSL
+#endif
+
+#ifdef ARDUINO_ARCH_ESP32
+						  //client.setInsecure(); // not implemented in ESP32
+#endif
+//	client.setInsecure();
 	if (!client.connect(host, httpsPort)) {
 		Serial.println("TLS connection failed");
 		delay(10000);
