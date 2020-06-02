@@ -110,3 +110,8 @@ Resources:
 
 2.8" PiTFT Plus Schematic & Layout
 https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/downloads
+
+http://arduino-esp8266.readthedocs.io/en/latest/Troubleshooting/stack_dump.html
+
+http://arduino-esp8266.readthedocs.io/en/latest/exception_causes.html
+
