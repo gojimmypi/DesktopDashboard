@@ -1,6 +1,6 @@
 # DesktopDashboard
 
-Desktop Dashboard using ESP8266 and ILI9341 display, as see here:
+Desktop Dashboard using ESP8266 and ILI9341 display, as seen here:
 
 https://www.youtube.com/watch?v=TmvaU6EQsAc
 
